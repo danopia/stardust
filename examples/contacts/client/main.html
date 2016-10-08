@@ -1,0 +1,27 @@
+<head>
+  <title>Contacts</title>
+</head>
+
+<body>
+  <h1>Welcome to Contacts, via DynamoDB!</h1>
+
+  {{> AddContact}}
+  {{> Contacts}}
+</body>
+
+<template name="Contacts">
+  <ul>
+    {{#each contact}}
+      <li><a href="/contacts/{{Slug}}">{{FirstName}} {{LastName}}</a></li>
+    {{/each}}
+  </ul>
+</template>
+
+<template name="AddContact">
+  <form name="addPerson">
+    <input type="text" name="FirstName" placeholder="First name" required>
+    <input type="text" name="LastName" placeholder="Last name">
+    <input type="email" name="Email" placeholder="Email address">
+    <button type="submit">Add Contact</button>
+  </form>
+</template>
