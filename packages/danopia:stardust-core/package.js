@@ -8,8 +8,7 @@ Package.onUse(function(api) {
   api.use('peerlibrary:aws-sdk@2.4.9_1', 'server');
   api.use('random', 'server');
 
-  api.use('danopia:stardust-core');
-  api.imply('danopia:stardust-core');
   api.mainModule('driver.coffee', 'server');
   // api.addFiles('util.coffee', 'server');
+  api.export('Stardust', 'server');
 });

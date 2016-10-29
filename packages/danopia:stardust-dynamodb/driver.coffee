@@ -1,22 +1,8 @@
-`Stardust = {};`
-
 dynamodb = new AWS.DynamoDB
 dynamodbstreams = new AWS.DynamoDBStreams
 
-slugify = (text) ->
-  text.toString().toLowerCase()
-    .split(':')[0]
-    .replace(/\s+/g, '-')           # Replace spaces with -
-    .replace(/[^\w\-]+/g, '')       # Remove all non-word chars
-    .replace(/\-\-+/g, '-')         # Replace multiple - with single -
-    .replace(/^-+/, '')             # Trim - from start of text
-    .replace(/-+$/, '')             # Trim - from end of text
-
-Stardust.Multi = class StardustMulti
-  constructor: (opts={}) ->
-    @tableName = opts.tableName ? 'Stardust'
-    @collections = {}
-
+Stardust.Engines.DynamoDB = class StardustDynamoDBEngine
+  constructor: ({@tableName}) ->
     @tableInfo = dynamodb.describeTableSync
       TableName: @tableName
     .Table
@@ -24,11 +10,9 @@ Stardust.Multi = class StardustMulti
     for key in @tableInfo.KeySchema
       @[key.KeyType.toLowerCase() + 'Key'] = key.AttributeName
 
+  start: (@multi) ->
     @streamSubs = []
     @startStream() if @tableInfo.LatestStreamArn
-
-  collection: (name, opts) ->
-    @collections[name] ?= new Stardust.Collection @, name, opts
 
   startStream: ->
     # TODO: assert StreamViewType, StreamStatus, LastEvaluatedShardId
@@ -54,8 +38,12 @@ Stardust.Multi = class StardustMulti
         ShardIterator: ShardIterator
         Limit: 10
 
-      for record in Records
-        @processRecord record
+      for rec in Records
+        # {eventID, eventName, dynamodb}
+        # also eventVersion, eventSource, awsRegion
+        {ApproximateCreationDateTime, Keys, NewImage} = rec.dynamodb
+        #console.log 'processing', rec.eventName, Keys, NewImage
+        @multi.processUpdate NewImage
 
       if NextShardIterator
         ShardIterator = NextShardIterator
@@ -67,25 +55,68 @@ Stardust.Multi = class StardustMulti
     console.log 'Warming shard', shardId
     poll()
 
-  processRecord: ({eventID, eventName, dynamodb}) ->
-    # also eventVersion, eventSource, awsRegion
-    {ApproximateCreationDateTime, Keys, NewImage} = dynamodb
-    console.log 'processing', eventName, Keys, NewImage
+  unwrap: (item, collection) ->
+    collection ?= @multi.collections[item[@hashKey].S]
+    doc =
+      _id: item[@rangeKey].S
+      _version: +item.Version.N
 
-    doc = People.unwrap NewImage
-    id = doc._id
-    delete doc._id
+    doc.Slug = item.Slug.S if item.Slug
 
-    #versions[id] = doc._version
-    #ids.push id
+    doc._createdAt = new Date item.CreatedAt.S if item.CreatedAt
+    doc._createdBy = item.CreatedBy.S if item.CreatedBy
+    doc._modifiedAt = new Date item.ModifiedAt.S if item.ModifiedAt
+    doc._modifiedBy = item.ModifiedBy.S if item.ModifiedBy
 
-    global.cbs.added? id, doc
-    global.cbs.addedBefore? id, doc, null
+    for key, type of collection.schema when obj = item['Doc.' + key]
+      doc[key] = switch type
+        when String then obj.S
+        when Date then new Date obj.S
+        when Number then +obj.N
+        when Boolean then obj.BOOL
 
-Stardust.QueryCursor = class StardustQueryCursor
+    return doc
+
+  insertProps: (collection, props, {userId} = {}) ->
+    random = DDP.randomStream('/collection/' + collection.name)
+    props._id = random.id()
+
+    item =
+      CreatedAt: S: new Date().toISOString()
+      Version: N: '1'
+
+    if userId
+      item.CreatedBy = S: userId
+
+    item[@hashKey] = S: collection.name
+    item[@rangeKey] = S: props._id
+
+    if collection.slug?
+      item.Slug = S: Stardust.slugify collection.slug.call(props).join('-')
+
+    for key, type of collection.schema when props[key]?
+      obj = switch type
+        when String then S: ''+props[key]
+        when Date then S: props[key].toISOString()
+        when Number then N: ''+(+props[key])
+        when Boolean then BOOL: !!props[key]
+
+      unless obj.S is ''
+        item['Doc.' + key] = obj
+
+    dynamodb.putItemSync
+      Item: item
+      TableName: @tableName
+      ConditionExpression: "attribute_not_exists(#{@rangeKey})"
+
+    return @unwrap item, collection
+
+StardustDynamoDBEngine.QueryCursor = class StardustDynamoDBQueryCursor
   constructor: (@coll, opts) ->
     @reactive = opts.reactive ? true
     @filter = opts.filter ? {}
+
+    {@engine} = @coll.stardust
 
   # publication glue
   _getCollectionName: -> @coll.name
@@ -123,13 +154,13 @@ Stardust.QueryCursor = class StardustQueryCursor
     console.log @coll.name, 'observeChanges'
 
     {Items, LastEvaluatedKey} = dynamodb.querySync
-      TableName: @coll.stardust.tableName
+      TableName: @engine.tableName
       # ProjectionExpression
       ConsistentRead: true
       # ExclusiveStartKey
       KeyConditionExpression: '#hashKey = :collName'
       ExpressionAttributeNames:
-        '#hashKey': @coll.stardust.hashKey
+        '#hashKey': @engine.hashKey
       ExpressionAttributeValues:
         ':collName': S: @coll.name
       # TODO: actually filter
@@ -138,15 +169,15 @@ Stardust.QueryCursor = class StardustQueryCursor
     versions = {}
     ids = []
 
+    global.cbs = cbs
     for item in Items
-      doc = @coll.unwrap item
+      doc = @engine.unwrap item, @coll
       id = doc._id
       delete doc._id
 
       versions[id] = doc._version
       ids.push id
 
-      global.cbs = cbs
       cbs.added? id, doc
       cbs.addedBefore? id, doc, null
 
@@ -162,66 +193,4 @@ Stardust.QueryCursor = class StardustQueryCursor
       console.log @coll.name, 'observeChanges STOP'
       # TODO
 
-Stardust.Collection = class StardustCollection
-  constructor: (@stardust, @name, opts) ->
-    {@schema, @slug} = opts
-    self = @
-
-    Meteor.methods
-      "/#{@name}/insert": (doc) ->
-        random = DDP.randomStream('/collection/' + self.name)
-        doc._id = random.id()
-
-        item =
-          CreatedAt: S: new Date().toISOString()
-          Version: N: '1'
-
-        if @userId
-          item.CreatedBy = S: @userId
-
-        item[self.stardust.hashKey] = S: self.name
-        item[self.stardust.rangeKey] = S: doc._id
-
-        if self.slug?
-          item.Slug = S: slugify self.slug.call(doc).join('-')
-
-        for key, type of self.schema when doc[key]?
-          obj = switch type
-            when String then S: ''+doc[key]
-            when Date then S: doc[key].toISOString()
-            when Number then N: ''+(+doc[key])
-            when Boolean then BOOL: !!doc[key]
-
-          unless obj.S is ''
-            item['Doc.' + key] = obj
-
-        dynamodb.putItemSync
-          Item: item
-          TableName: self.stardust.tableName
-          ConditionExpression: "attribute_not_exists(#{self.stardust.rangeKey})"
-
-        return self.unwrap item
-
-  unwrap: (item) ->
-    doc =
-      _id: item[@stardust.rangeKey].S
-      _version: +item.Version.N
-
-    doc.Slug = item.Slug.S if item.Slug
-
-    doc._createdAt = new Date item.CreatedAt.S if item.CreatedAt
-    doc._createdBy = item.CreatedBy.S if item.CreatedBy
-    doc._modifiedAt = new Date item.ModifiedAt.S if item.ModifiedAt
-    doc._modifiedBy = item.ModifiedBy.S if item.ModifiedBy
-
-    for key, type of @schema when obj = item['Doc.' + key]
-      doc[key] = switch type
-        when String then obj.S
-        when Date then new Date obj.S
-        when Number then +obj.N
-        when Boolean then obj.BOOL
-
-    return doc
-
-  find: (filter, opts={}) ->
-    return new Stardust.QueryCursor @, opts
+Stardust.Engine = Stardust.Engines.DynamoDB
