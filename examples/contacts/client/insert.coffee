@@ -1,4 +1,4 @@
-window.Contacts = new Meteor.Collection 'contacts'
+window.Contacts = new Meteor.Collection 'people'
 
 Template.AddContact.events
   'submit form': (evt) ->

@@ -1,6 +1,6 @@
 global.stardust = new Stardust.Multi
 
-global.Contacts = stardust.collection 'contacts',
+global.Contacts = stardust.collection 'people',
   schema:
     FirstName: String
     LastName: String
