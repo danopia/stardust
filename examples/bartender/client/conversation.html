@@ -1,0 +1,18 @@
+<template name="Conversation">
+  <div class="chat-log">
+    {{#each fragments}}
+      <div class="message character-{{characterInfo.Slug}}">
+        {{#with characterInfo}}
+          <img src={{Image}} class="avatar">
+        {{/with}}
+        <div class="body">{{Text}}</div>
+      </div>
+    {{/each}}
+
+    <div class="next-fragments">
+      {{#each nextFragments}}
+        <button class="select-fragment" type="button">{{Text}}</button>
+      {{/each}}
+    </div>
+  </div>
+</template>

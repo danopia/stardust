@@ -1,0 +1,54 @@
+body {
+  background-color: #aaa;
+  max-width: 50em;
+  margin: 0 auto;
+}
+
+.avatar {
+  height: 48px;
+  border-radius: 5px;
+}
+
+.chat-log {
+  background-color: #ddd;
+  padding: 1em;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 1em;
+}
+.message.character-you {
+  flex-direction: row-reverse;
+}
+
+.body {
+  padding: 5px;
+  background-color: #fff;
+  align-self: flex-start;
+  margin: 0 0.5em;
+  font-family: sans-serif;
+  font-size: 1.2em;
+  border-radius: 5px;
+  padding: 0.2em 0.5em;
+}
+.character-player .body {
+  background-color: #66f;
+  color: #fff;
+}
+
+.next-fragments {
+  display: flex;
+  flex-direction: row-reverse;
+}
+.select-fragment {
+  background-color: #eee;
+  border-radius: 5px;
+  border: 1px solid gray;
+  font-size: 1.2em;
+  margin: 0 0.5em;
+  padding: 0.2em 0.5em;
+}
