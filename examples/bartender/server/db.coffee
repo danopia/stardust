@@ -32,7 +32,7 @@ Meteor.startup ->
 
   if currentVersion < 1
     console.log 'Migrating to 1'
-    
+
     mei = Characters.insert
       Name: 'Mei Chang'
       Gender: 'female'
@@ -112,3 +112,16 @@ Meteor.startup ->
 
     Migrations.insert
       Ordering: 1
+
+
+  if currentVersion < 2
+    console.log 'Migrating to 2'
+
+    mei = Characters.findOne
+      Name: 'Mei Chang'
+
+    Characters.update mei._id, $set:
+      Image: '/img/mei-chang.svg'
+
+    Migrations.insert
+      Ordering: 2

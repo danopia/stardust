@@ -58,7 +58,14 @@ Stardust.Engines.MongoDB = class StardustMongoDBEngine
 StardustMongoDBEngine.QueryCursor = class StardustMongoDBQueryCursor
   constructor: (@coll, opts) ->
     @reactive = opts.reactive ? true
-    @filter = opts.filter ? {}
+    @filterOriginal = opts.filter ? {}
+    @userId = opts.userId
+
+    # TODO: query ops, $eq
+    if @filterOriginal.constructor is String
+      @filter = @docPropsToMongo(_id: @filterOriginal)
+    else
+      @filter = @docPropsToMongo(@filterOriginal)
 
     {@engine} = @coll.stardust
 
@@ -85,7 +92,7 @@ StardustMongoDBEngine.QueryCursor = class StardustMongoDBQueryCursor
       .map (item) => @engine.unwrap(item)
       .map callback, thisArg
   fetch: -> # reactive, blocking
-    console.log @coll.name, 'fetch'
+    console.log @coll.name, 'fetch', @filter
     @engine.table
       .find($and: [{type: @coll.name}, @filter])
       .map (item) => @engine.unwrap(item)
@@ -94,6 +101,47 @@ StardustMongoDBEngine.QueryCursor = class StardustMongoDBQueryCursor
     @engine.table
       .find($and: [{type: @coll.name}, @filter])
       .count()
+
+
+  # Out of spec - Mongo cursors don't have these
+  # Just a convenient place to keep them
+  update: (ops) ->
+    dbOps =
+      $inc: version: 1
+      $set:
+        modifiedAt: new Date
+
+    for opType, opVal of ops
+      switch opType
+        when '$set'
+          dbOps.$set = @docPropsToMongo(opVal)
+          dbOps.$set.modifiedAt = new Date
+        else
+          throw new Error "Mongo update operator #{opType} is't implemented yet"
+
+    @engine.table.update @filter, dbOps
+
+  docPropsToMongo: (props) ->
+    fields = {}
+    for key, val of props
+      {type, fullKey} = switch
+        when key of @coll.schema
+          type: @coll.schema[key]
+          fullKey: 'props.' + key
+
+        when key is '_id'
+          # TODO: block writes
+          type: String
+          fullKey: 'id'
+        else throw new Meteor.Error 'invalid-prop', "Property #{key} is not in schema"
+
+      fields[fullKey] = switch type
+        when String then ''+val
+        when Date then new Date(+val)
+        when Number then +val
+        when Boolean then !!val
+        else throw new Meteor.Error 'invalid-type', "Property #{key} is of the wrong type"
+    return fields
 
   observe: (cbs) -> # starts live query, blocks for initial results
     console.log @coll.name, 'observe'

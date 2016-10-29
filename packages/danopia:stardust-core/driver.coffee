@@ -50,7 +50,17 @@ Stardust.Collection = class StardustCollection
         return doc._id
 
   find: (filter, opts={}) ->
+    opts.filter = filter
     return new @stardust.engine.constructor.QueryCursor @, opts
+
+  findOne: (filter, opts={}) ->
+    @find(filter, opts)
+      .fetch()[0]
+
+  # called on the server
+  update: (filter, ops, opts={}) ->
+    @find(filter, opts) # TODO:
+      .update(ops, opts)
 
   # called on the server
   insert: (props) ->
