@@ -11,7 +11,7 @@ Stardust.slugify = (text) ->
 
 Stardust.Engines = {}
 Stardust.Engine = ->
-  alert 'No Stardust engine is loaded. Fire one up and try again.'
+  (alert ? console.log) 'No Stardust engine is loaded. Fire one up and try again.'
 
 Stardust.Multi = class StardustMulti
   constructor: (opts={}) ->
@@ -43,9 +43,16 @@ Stardust.Collection = class StardustCollection
     {@schema, @slug} = opts
     self = @
 
+    # called by the clients
     Meteor.methods
       "/#{@name}/insert": (props) ->
-        self.stardust.engine.insertProps self, props, @
+        doc = self.stardust.engine.insertProps self, props, @
+        return doc._id
 
   find: (filter, opts={}) ->
     return new @stardust.engine.constructor.QueryCursor @, opts
+
+  # called on the server
+  insert: (props) ->
+    doc = @stardust.engine.insertProps @, props
+    return doc._id
