@@ -25,19 +25,6 @@ Stardust.Multi = class StardustMulti
   collection: (name, opts) ->
     @collections[name] ?= new Stardust.Collection @, name, opts
 
-  processUpdate: (newRecord) ->
-    # TODO: use right collection
-    doc = @engine.unwrap newRecord # TODO
-    id = doc._id
-    delete doc._id
-
-    #versions[id] = doc._version
-    #ids.push id
-
-    # TODO: use right CB, copy API probably.
-    global.cbs.added? id, doc
-    global.cbs.addedBefore? id, doc, null
-
 Stardust.Collection = class StardustCollection
   constructor: (@stardust, @name, opts) ->
     {@schema, @slug} = opts

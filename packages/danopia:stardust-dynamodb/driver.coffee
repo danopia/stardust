@@ -10,6 +10,8 @@ Stardust.Engines.DynamoDB = class StardustDynamoDBEngine
     for key in @tableInfo.KeySchema
       @[key.KeyType.toLowerCase() + 'Key'] = key.AttributeName
 
+    @watchedCursors = new Set
+
   start: (@multi) ->
     @streamSubs = []
     @startStream() if @tableInfo.LatestStreamArn
@@ -43,7 +45,7 @@ Stardust.Engines.DynamoDB = class StardustDynamoDBEngine
         # also eventVersion, eventSource, awsRegion
         {ApproximateCreationDateTime, Keys, NewImage} = rec.dynamodb
         #console.log 'processing', rec.eventName, Keys, NewImage
-        @multi.processUpdate NewImage
+        @processUpdate NewImage
 
       if NextShardIterator
         ShardIterator = NextShardIterator
@@ -111,16 +113,47 @@ Stardust.Engines.DynamoDB = class StardustDynamoDBEngine
 
     return @unwrap item, collection
 
+  processUpdate: (newRecord) ->
+    doc = @unwrap newRecord
+    id = doc._id
+    delete doc._id
+
+    console.log 'hi mom', newRecord
+    @watchedCursors.forEach (cursor) ->
+      cursor._processUpdate 'added', id, doc
+
 StardustDynamoDBEngine.QueryCursor = class StardustDynamoDBQueryCursor
   constructor: (@coll, opts) ->
     @reactive = opts.reactive ? true
     @filter = opts.filter ? {}
 
+    @watches = new Set
     {@engine} = @coll.stardust
+
+  _processUpdate: (type, id, doc) ->
+    # TODO: actually match filter
+    if Object.keys(@filter).length isnt 0
+      return
+
+    @watches.forEach (watcher) ->
+      watcher.versions.set id, doc._version
+      watcher.ids.add id
+      watcher.cbs.added? id, doc
+      #watcher.cbs.addedBefore? id, doc, null
+
+  _subscribe: (watcher) ->
+    @watches.add watcher
+    @engine.watchedCursors.add @
+    return @_unsub.bind(@, watcher)
+  _unsub: (watcher) ->
+    @watches.delete watcher
+    if @watches.size is 0
+      @engine.watchedCursors.delete @
 
   # publication glue
   _getCollectionName: -> @coll.name
   _publishCursor: (sub) ->
+    # publications are never ordered
     observeHandle = @observeChanges
       added: (id, fields) => sub.added @coll.name, id, fields
       changed: (id, fields) => sub.changed @coll.name, id, fields
@@ -128,14 +161,26 @@ StardustDynamoDBEngine.QueryCursor = class StardustDynamoDBQueryCursor
     sub.onStop -> observeHandle.stop()
     return observeHandle
 
-  forEach: (callback, thisArg) -> # reactive, sequential, (doc, idx, @)
-    console.log @coll.name, 'for each'
-  map: (callback, thisArg) -> # reactive, parallel, (doc, idx, @)
-    console.log @coll.name, 'map'
+  # This is the actual blocking query implementation
   fetch: -> # reactive, blocking
-    console.log @coll.name, 'fetch'
+    #console.log @coll.name, 'fetch'
+    list = []
+    {stop} = @observeChanges
+      added: (id, doc) ->
+        list.push doc
+    stop()
+    return list
+
+  # Blocking helpers, currently implemented with @fetch()
+  forEach: (callback, thisArg) -> # reactive, sequential, (doc, idx, @)
+    #console.log @coll.name, 'for each'
+    @fetch().forEach callback, thisArg
+  map: (callback, thisArg) -> # reactive, parallel, (doc, idx, @)
+    #console.log @coll.name, 'map'
+    @fetch().map callback, thisArg
   count: -> # reactive
-    console.log @coll.name, 'count'
+    #console.log @coll.name, 'count'
+    @fetch().length
 
   observe: (cbs) -> # starts live query, blocks for initial results
     console.log @coll.name, 'observe'
@@ -151,7 +196,12 @@ StardustDynamoDBEngine.QueryCursor = class StardustDynamoDBQueryCursor
       console.log @coll.name, 'observe STOP'
 
   observeChanges: (cbs) ->
-    console.log @coll.name, 'observeChanges'
+    #console.log @coll.name, 'observeChanges'
+
+    watcher =
+      versions: new Map # id => version
+      ids: new Set      # id
+      cbs: cbs
 
     {Items, LastEvaluatedKey} = dynamodb.querySync
       TableName: @engine.tableName
@@ -166,20 +216,17 @@ StardustDynamoDBEngine.QueryCursor = class StardustDynamoDBQueryCursor
       # TODO: actually filter
     # TODO: LastEvaluatedKey
 
-    versions = {}
-    ids = []
-
-    global.cbs = cbs
     for item in Items
       doc = @engine.unwrap item, @coll
       id = doc._id
       delete doc._id
 
-      versions[id] = doc._version
-      ids.push id
+      watcher.versions.set id, doc._version
+      watcher.ids.add id
+      watcher.cbs.added? id, doc
+      #watcher.cbs.addedBefore? id, doc, null
 
-      cbs.added? id, doc
-      cbs.addedBefore? id, doc, null
+    stop: @_subscribe watcher
 
     ###
     added: (id, fields) ->
@@ -188,9 +235,5 @@ StardustDynamoDBEngine.QueryCursor = class StardustDynamoDBQueryCursor
     movedBefore: (id, before) ->
     removed: (id) ->
     ###
-
-    stop: => # should run when parent autorun stops, if any?
-      console.log @coll.name, 'observeChanges STOP'
-      # TODO
 
 Stardust.Engine = Stardust.Engines.DynamoDB
