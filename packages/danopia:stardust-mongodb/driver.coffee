@@ -19,6 +19,9 @@ Stardust.Engines.MongoDB = class StardustMongoDBEngine
     doc._modifiedBy = item.modifiedBy
 
     for key, type of collection.schema when (obj = item.props[key])?
+      if type.type?
+        {type} = type
+
       doc[key] = switch type
         when String then ''+obj
         when Date then new Date +obj
@@ -46,6 +49,10 @@ Stardust.Engines.MongoDB = class StardustMongoDBEngine
       item.slug = Stardust.slugify collection.slug.call(props).join('-')
 
     for key, type of collection.schema when props[key]?
+      if type.type?
+        {type, optional} = type
+      # TODO: validation
+
       item.props[key] = switch type
         when String then ''+props[key]
         when Date then new Date(+props[key])
@@ -134,6 +141,9 @@ StardustMongoDBEngine.QueryCursor = class StardustMongoDBQueryCursor
           type: String
           fullKey: 'id'
         else throw new Meteor.Error 'invalid-prop', "Property #{key} is not in schema"
+
+      if type.type?
+        {type} = type
 
       fields[fullKey] = switch type
         when String then ''+val
