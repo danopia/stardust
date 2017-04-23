@@ -1,4 +1,4 @@
-package ddp
+package common
 
 import (
 	"crypto/rand"

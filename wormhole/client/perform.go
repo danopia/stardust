@@ -23,8 +23,12 @@ func (c *SockJsClient) perform() {
 }
 
 func (c *SockJsClient) processSource() {
+  log.Println("Processing source...")
 	for msg := range c.Source {
 		switch msg.Type {
+
+    case "result":
+      c.onResult(msg)
 
 		default:
 			log.Printf("!UNKNOWN! %+v\n", msg)

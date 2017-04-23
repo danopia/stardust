@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/danopia/stardust/wormhole/ddp"
+	"github.com/danopia/stardust/wormhole/common"
 	"github.com/gorilla/websocket"
 )
 
@@ -25,11 +26,8 @@ type SockJsClient struct {
 	Source chan ddp.Message
 	Sink   chan ddp.Message
 
-	Invocations map[string]Invocation
-}
-
-type Invocation struct {
-	Callback func(c *SockJsClient, result interface{})
+  idGen <-chan int64
+	invocations map[int64]*Invocation
 }
 
 func (c *SockJsClient) pumpSink() {
@@ -115,7 +113,8 @@ func Connect(url string) (c SockJsClient) {
 		Source: make(chan ddp.Message),
 		Sink:   make(chan ddp.Message),
 
-		Invocations: make(map[string]Invocation),
+    idGen: common.NewInt64Dispenser().C,
+		invocations: make(map[int64]*Invocation),
 	}
 
 	// Wait for an initial 'o' frame
@@ -131,6 +130,7 @@ func Connect(url string) (c SockJsClient) {
 
 	go c.pumpSink()
 	go c.pumpSource()
+  c.perform()
 
 	// Send a welcome packet for auth
 	// s.Sink <- common.Packet{

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/danopia/stardust/wormhole/common"
 )
 
 func ServeSockJs(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +30,7 @@ func ServeSockJs(w http.ResponseWriter, r *http.Request) {
 
 	c := Client{
 		Conn:    conn,
-		Session: GenerateSecret(),
+		Session: common.GenerateSecret(),
 		Subs:    make(map[string]*ClientSub),
 		Source:  make(chan *Message),
 		Sink:    make(chan *Message),

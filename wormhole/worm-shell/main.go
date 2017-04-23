@@ -22,6 +22,11 @@ func main() {
 	shell := ishell.New()
 	shell.SetHomeHistoryPath(".wormshell_history")
 
+	url := fmt.Sprint("ws://", *host, ":", *port, "/sockjs")
+	shell.Printf("Connecting to %s... ", url)
+	client := client.Connect(url)
+	shell.Println("ready!")
+
 	shell.AddCmd(&ishell.Cmd{
 		Name: "mount",
 		Help: "source, target, fs, flags, data",
@@ -97,12 +102,11 @@ func main() {
 		},
 	})
 
-	url := fmt.Sprint("ws://", *host, ":", *port, "/sockjs")
-	shell.Printf("Connecting to %s... ", url)
-	client := client.Connect(url)
-	shell.Println(" ready!")
+  bootResult := client.Invoke("boot", map[string]interface{}{
+    "agent":         "worm-shell",
+  })
 
-	shell.Println("Welcome to the server")
+	shell.Println("Welcome to the server", bootResult)
 	shell.ShowPrompt(true)
 	shell.Start()
 }

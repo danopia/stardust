@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/danopia/stardust/wormhole/ddp"
+	"github.com/danopia/stardust/wormhole/kernel"
 )
 
 func main() {
@@ -24,6 +25,8 @@ func main() {
 
 	// Prepare the app
 	//app.RefreshChroots()
+
+	kernel.Start()
 
 	host := fmt.Sprint("localhost:", *port)
 	log.Printf("Listening on %s...", host)
