@@ -24,7 +24,7 @@ func main() {
 	ns.AddDevice("/mnt/consul", devices.NewConsulDevice())
 	ns.Put("/mnt/consul/key", "hello world")
 
-	ns.AddDevice("/mnt/irc/freenode", devices.NewIrcDevice())
+	ns.AddDevice("/mnt/irc/freenode", devices.NewIrcDevice(ns))
 	ns.Put("/mnt/irc/freenode/nickname", "star-router")
 	ns.Put("/mnt/irc/freenode/username", "stardust")
 	ns.Put("/mnt/irc/freenode/server", "chat.freenode.net:6667")

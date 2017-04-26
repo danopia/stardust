@@ -33,7 +33,8 @@ func (n *Namespace) Get(path string) (data interface{}) {
     }
   }
 
-  panic("404 getting " + path)
+  //panic("404 getting " + path)
+  return nil
 }
 
 func (n *Namespace) Put(path string, data interface{}) {
@@ -49,5 +50,5 @@ func (n *Namespace) Put(path string, data interface{}) {
     }
   }
 
-  panic("404 putting " + path)
+  //panic("404 putting " + path)
 }
