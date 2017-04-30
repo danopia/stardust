@@ -2,6 +2,7 @@ package devices
 
 import (
   "github.com/hashicorp/consul/api"
+  "github.com/danopia/stardust/star-router/base"
 )
 
 // Manufactors virtual devices which can exist in more than one place at once
@@ -12,7 +13,7 @@ type ConsulDevice struct {
   //Properties map[string]interface{}
 }
 
-func NewConsulDevice() *ConsulDevice {
+func NewConsulDevice() base.Device {
   // Get a new client
   client, err := api.NewClient(api.DefaultConfig())
   if err != nil {
@@ -26,7 +27,11 @@ func NewConsulDevice() *ConsulDevice {
 }
 
 func (c *ConsulDevice) Get(path string) (data interface{}) {
-  pair, _, err := c.kv.Get(path, nil)
+  if path == "/" {
+    return []string{"kv"}
+  }
+
+  pair, _, err := c.kv.Get(path[1:], nil)
   if err != nil {
     panic(err)
   }
@@ -37,10 +42,18 @@ func (c *ConsulDevice) Get(path string) (data interface{}) {
   return string(pair.Value) // []byte
 }
 
-func (c *ConsulDevice) Put(path string, data interface{}) {
-  p := &api.KVPair{Key: path, Value: []byte(data.(string))}
-  _, err := c.kv.Put(p, nil)
+func (d *ConsulDevice) Set(path string, data interface{}) {
+  p := &api.KVPair{Key: path[1:], Value: []byte(data.(string))}
+  _, err := d.kv.Put(p, nil)
   if err != nil {
       panic(err)
   }
+}
+
+func (d *ConsulDevice) Map(path string, input interface{}) (output interface{}) {
+  return nil
+}
+
+func (d *ConsulDevice) Observe(path string) (stream <-chan interface{}) {
+  return nil
 }
