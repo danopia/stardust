@@ -1,134 +1,142 @@
 package entries
 
 import (
-  "strings"
-  "github.com/hashicorp/consul/api"
-  "github.com/danopia/stardust/star-router/base"
-  "github.com/danopia/stardust/star-router/inmem"
+	"github.com/danopia/stardust/star-router/base"
+	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/hashicorp/consul/api"
+	"strings"
 )
 
 // Directory containing the clone function
 func getConsulDriver() *inmem.Folder {
-  driver := inmem.NewFolder("consul")
-  driver.Put("clone", &consulClone{})
-  driver.Freeze()
-  return driver
+	driver := inmem.NewFolder("consul")
+	driver.Put("clone", &consulClone{})
+	driver.Freeze()
+	return driver
 }
 
 // Function that creates a new consul client when invoked
-type consulClone struct {}
+type consulClone struct{}
+
 var _ base.Function = (*consulClone)(nil)
+
 func (e *consulClone) Name() string {
-  return "clone"
+	return "clone"
 }
 
 func (e *consulClone) Invoke(input base.Entry) (output base.Entry) {
-  client, err := api.NewClient(api.DefaultConfig())
-  if err != nil {
-      panic(err)
-  }
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		panic(err)
+	}
 
-  return &consulRoot{client}
+	return &consulRoot{client}
 }
 
 // Main Entity representing a consul client
 // Presents k/v tree as a child
 type consulRoot struct {
-  client *api.Client
+	client *api.Client
 }
+
 var _ base.Folder = (*consulRoot)(nil)
+
 func (e *consulRoot) Name() string {
-  return "consul"
+	return "consul"
 }
 func (e *consulRoot) Children() []string {
-  return []string{"kv"}
+	return []string{"kv"}
 }
 func (e *consulRoot) Fetch(name string) (entry base.Entry, ok bool) {
-  switch name {
+	switch name {
 
-  case "kv":
-    return &consulKV{
-      root: e,
-      kv: e.client.KV(),
-    }, true
+	case "kv":
+		return &consulKV{
+			root: e,
+			kv:   e.client.KV(),
+		}, true
 
-  default:
-    return
-  }
+	default:
+		return
+	}
 }
 func (e *consulRoot) Put(name string, entry base.Entry) (ok bool) {
-  return false
+	return false
 }
 
 // Directory/String tree backed by consul kv
 type consulKV struct {
-  root *consulRoot
-  kv *api.KV
-  path string
+	root *consulRoot
+	kv   *api.KV
+	path string
 }
+
 var _ base.Folder = (*consulKV)(nil)
 var _ base.String = (*consulKV)(nil)
+
 func (e *consulKV) Name() string {
-  if e.path == "" {
-    return "kv"
-  } else {
-    if idx := strings.LastIndex(e.path, "/"); idx != -1 {
-      return e.path[idx+1:]
-    } else {
-      return e.path
-    }
-  }
+	if e.path == "" {
+		return "kv"
+	} else {
+		if idx := strings.LastIndex(e.path, "/"); idx != -1 {
+			return e.path[idx+1:]
+		} else {
+			return e.path
+		}
+	}
 }
 func (e *consulKV) Children() []string {
-  keys, _, err := e.kv.Keys(e.path, "/", nil)
-  if err != nil {
-    panic(err)
-  }
-  return keys
+	keys, _, err := e.kv.Keys(e.path, "/", nil)
+	if err != nil {
+		panic(err)
+	}
+	return keys
 }
+
 // this always works
 func (e *consulKV) Fetch(name string) (entry base.Entry, ok bool) {
-  prefix := e.path
-  if len(prefix) > 0 {
-    prefix += "/"
-  }
+	prefix := e.path
+	if len(prefix) > 0 {
+		prefix += "/"
+	}
 
-  return &consulKV{
-    root: e.root,
-    kv: e.kv,
-    path: prefix + name,
-  }, true
+	return &consulKV{
+		root: e.root,
+		kv:   e.kv,
+		path: prefix + name,
+	}, true
 }
+
 // this never works because you can't bind foreign nodes into the consul tree
 // you have to get a node then set its value
 func (e *consulKV) Put(name string, entry base.Entry) (ok bool) {
-  return false
+	return false
 }
 func (e *consulKV) Get() (value string, ok bool) {
-  if e.path == "" {
-    return "", false
-  }
+	if e.path == "" {
+		return "", false
+	}
 
-  pair, _, err := e.kv.Get(e.path, nil)
-  if err != nil {
-    panic(err)
-  }
+	pair, _, err := e.kv.Get(e.path, nil)
+	if err != nil {
+		panic(err)
+	}
 
-  if pair == nil {
-    return "", false
-  }
-  return string(pair.Value), true // []byte
+	if pair == nil {
+		return "", false
+	}
+	return string(pair.Value), true // []byte
 }
 
 func (e *consulKV) Set(value string) (ok bool) {
-  p := &api.KVPair{
-    Key: e.path,
-    Value: []byte(value),
-  }
+	p := &api.KVPair{
+		Key:   e.path,
+		Value: []byte(value),
+	}
 
-  _, err := e.kv.Put(p, nil)
-  if err != nil {
-    panic(err)
-  }
-  return true
+	_, err := e.kv.Put(p, nil)
+	if err != nil {
+		panic(err)
+	}
+	return true
 }

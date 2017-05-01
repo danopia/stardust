@@ -1,26 +1,26 @@
 package base
 
 import (
-  //"log"
-  //"strings"
+//"log"
+//"strings"
 )
 
 var RootSpace *Namespace
 
 type Namespace struct {
 	BaseUri string
-  Root Entry
+	Root    Entry
 }
 
 func NewNamespace(baseUri string, root Entry) *Namespace {
-  return &Namespace{
+	return &Namespace{
 		BaseUri: baseUri,
-    Root: root,
+		Root:    root,
 	}
 }
 
 func (n *Namespace) NewHandle() Handle {
-  return newRootHandle(n)
+	return newRootHandle(n)
 }
 
 /*

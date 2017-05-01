@@ -2,7 +2,7 @@ package base
 
 // The most basic node, with no characteristics besides a Name
 type Entry interface {
-  Name() string
+	Name() string
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -15,48 +15,48 @@ type Entry interface {
 
 // A node that has named enumerable child Entries
 type Folder interface {
-  Entry
-  Children() []string
-  Fetch(name string) (entry Entry, ok bool)
-  Put(name string, entry Entry) (ok bool)
+	Entry
+	Children() []string
+	Fetch(name string) (entry Entry, ok bool)
+	Put(name string, entry Entry) (ok bool)
 }
 
 // A node that can be invoked to map an Entry
 type Function interface {
-  Entry
-  Invoke(input Entry) (output Entry)
+	Entry
+	Invoke(input Entry) (output Entry)
 }
 
 // A node that has ordered enumerable children
 type List interface {
-  Entry
-  // TODO: gotta be a better way to do this.
-  Children() []Entry
+	Entry
+	// TODO: gotta be a better way to do this.
+	Children() []Entry
 }
 
 // A node which has a single atomic string value.
 type String interface {
-  Entry
-  Get() (value string, ok bool)
-  Set(value string) (ok bool)
+	Entry
+	Get() (value string, ok bool)
+	Set(value string) (ok bool)
 }
 
 // A node which has a known-size buffer of bytes
 type File interface {
-  Entry
-  GetSize() uint
-  Read(offset uint, numBytes uint) (data []byte)
-  Write(offset uint, data []byte) (numBytes uint)
-  Truncate() (ok bool)
+	Entry
+	GetSize() uint
+	Read(offset uint, numBytes uint) (data []byte)
+	Write(offset uint, data []byte) (numBytes uint)
+	Truncate() (ok bool)
 }
 
 // A node which acts as a FIFO pipe of foreign Entries
 // (PS: should be usable for AWS SQS deliveries)
 type Queue interface {
-  Entry
-  Push(value Entry) (ok bool)
-  Next() (value Entry, ok bool) // waits for the next value
-  TryNext() (value Entry, ok bool) // gets next value if one is waiting
+	Entry
+	Push(value Entry) (ok bool)
+	Next() (value Entry, ok bool)    // waits for the next value
+	TryNext() (value Entry, ok bool) // gets next value if one is waiting
 }
 
 // A node maintaining an append-only log of Entries.
@@ -64,9 +64,9 @@ type Queue interface {
 // (PS: should be compatible with AWS Kinesis)
 // TODO: rename Log
 type Journal interface {
-  Entry
-  Push(value Entry) (ok bool)
-  Next() (value Entry, ok bool) // waits for the next value
+	Entry
+	Push(value Entry) (ok bool)
+	Next() (value Entry, ok bool) // waits for the next value
 }
 
 // TODO: this shouldn't be baked in, right?
