@@ -42,8 +42,11 @@ func (e *Queue) Name() string {
 }
 
 func (e *Queue) Push(value base.Entry) (ok bool) {
-	e.channel <- value
-	return true
+	if e.writable {
+		e.channel <- value
+		ok = true
+	}
+	return
 }
 
 func (e *Queue) Next() (value base.Entry, ok bool) {
