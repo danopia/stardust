@@ -49,7 +49,12 @@ func (e *Folder) Fetch(name string) (entry base.Entry, ok bool) {
 
 func (e *Folder) Put(name string, entry base.Entry) (ok bool) {
 	if e.writable {
-		e.children[name] = entry
+		if entry == nil {
+			delete(e.children, name)
+		} else {
+			e.children[name] = entry
+		}
+
 		ok = true
 	}
 	return

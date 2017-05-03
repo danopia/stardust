@@ -152,6 +152,10 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 
 	go func() {
 		defer connection.Close()
+		defer func() {
+			e.tmpFolder.Put(addr, nil)
+		}()
+
 		for {
 			entry, ok := output.Next()
 			if !ok {
@@ -212,6 +216,8 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 
 		line, err := term.ReadLine()
 		if err == io.EOF {
+			commands.Close()
+			log.Println("Client disconnected", addr)
 			return
 		}
 		if err != nil {
