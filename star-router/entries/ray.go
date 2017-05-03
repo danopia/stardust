@@ -10,6 +10,25 @@ import (
 	"github.com/mattn/go-shellwords"
 )
 
+// Read-only string impl that returns the given handle's location
+type handlePathString struct {
+	handle base.Handle
+}
+
+var _ base.String = (*handlePathString)(nil)
+
+func (e *handlePathString) Name() string {
+	return "cwd"
+}
+
+func (e *handlePathString) Get() (value string, ok bool) {
+	return e.handle.Path(), true
+}
+
+func (e *handlePathString) Set(value string) (ok bool) {
+	return false
+}
+
 // Evaluation context for a ray
 // Handles instructions one-by-one
 
@@ -18,18 +37,21 @@ type rayCtx struct {
 	output   base.Queue
 	result   base.Queue
 	environ  base.Folder
+	cwd      base.String
 
 	handle base.Handle
 }
 
 func newRayCtx(cmdQueue base.Queue) *rayCtx {
-	return &rayCtx{
+	ctx := &rayCtx{
 		commands: cmdQueue,
 		output:   inmem.NewBufferedQueue("output", 10),
 		result:   inmem.NewBufferedQueue("result", 1),
 		environ:  inmem.NewFolder("environ"),
 		handle:   base.RootSpace.NewHandle(),
 	}
+	ctx.cwd = &handlePathString{ctx.handle}
+	return ctx
 }
 
 func (c *rayCtx) pumpCommands() {
@@ -68,6 +90,7 @@ func (c *rayCtx) getBundle() base.Folder {
 	folder.Put("output", c.output)
 	folder.Put("result", c.result)
 	folder.Put("environ", c.environ)
+	folder.Put("cwd", c.cwd)
 	folder.Freeze()
 	return folder
 }

@@ -1,17 +1,18 @@
 package entries
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
-  "net"
 	"io/ioutil"
 	"log"
-  "encoding/binary"
+	"net"
+	"time"
 
-  "github.com/danopia/stardust/star-router/base"
+	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/inmem"
-  "golang.org/x/crypto/ssh"
-  "golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Function that creates a new ray shell when invoked
@@ -24,25 +25,25 @@ func (e *raySshFunc) Name() string {
 }
 
 func (e *raySshFunc) Invoke(input base.Entry) (output base.Entry) {
-  service := &raySsh{
-    rayFunc: input.(base.Function), // TODO
-  }
-  service.configure()
-  service.start()
-  return nil
+	service := &raySsh{
+		rayFunc: input.(base.Function), // TODO
+	}
+	service.configure()
+	service.start()
+	return nil
 }
 
 // Context for a running SSH server
 type raySsh struct {
-  sshConfig *ssh.ServerConfig
-  rayFunc base.Function
+	sshConfig *ssh.ServerConfig
+	rayFunc   base.Function
 }
 
 func (e *raySsh) configure() {
-  e.sshConfig = &ssh.ServerConfig{
-    PasswordCallback: e.checkPassword,
-    NoClientAuth: true,
-  }
+	e.sshConfig = &ssh.ServerConfig{
+		PasswordCallback: e.checkPassword,
+		NoClientAuth:     true,
+	}
 
 	// You can generate a keypair with 'ssh-keygen -t rsa'
 	privateBytes, err := ioutil.ReadFile("id_rsa")
@@ -59,10 +60,10 @@ func (e *raySsh) configure() {
 }
 
 func (e *raySsh) checkPassword(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-  if c.User() == "star" && string(pass) == "dust" {
-    return nil, nil
-  }
-  return nil, fmt.Errorf("password rejected for %q", c.User())
+	if c.User() == "star" && string(pass) == "dust" {
+		return nil, nil
+	}
+	return nil, fmt.Errorf("password rejected for %q", c.User())
 }
 
 func (e *raySsh) start() {
@@ -73,7 +74,7 @@ func (e *raySsh) start() {
 		log.Fatalf("failed to listen for connection: %+v", err)
 	}
 
-  log.Println("Listening for SSH on port 2022")
+	log.Println("Listening for SSH on port 2022")
 	for {
 		// A ServerConn multiplexes several channels, which must
 		// themselves be Accepted.
@@ -90,9 +91,9 @@ func (e *raySsh) start() {
 			continue
 		}
 
-    log.Printf("New SSH connection from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
+		log.Printf("New SSH connection from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
 
-    go ssh.DiscardRequests(reqs)
+		go ssh.DiscardRequests(reqs)
 		go e.handleChannels(chans)
 	}
 }
@@ -105,86 +106,98 @@ func (e *raySsh) handleChannels(chans <-chan ssh.NewChannel) {
 }
 
 func (e *raySsh) handleChannel(ch ssh.NewChannel) {
-  // Since we're handling a shell, we expect a
-  // channel type of "session". The also describes
-  // "x11", "direct-tcpip" and "forwarded-tcpip"
-  // channel types.
-  if t := ch.ChannelType(); t != "session" {
-    ch.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
-    return
-  }
+	// Since we're handling a shell, we expect a
+	// channel type of "session". The also describes
+	// "x11", "direct-tcpip" and "forwarded-tcpip"
+	// channel types.
+	if t := ch.ChannelType(); t != "session" {
+		ch.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
+		return
+	}
 
-  // At this point, we have the opportunity to reject the client's
-  // request for another logical connection
-  connection, requests, err := ch.Accept()
-  if err != nil {
-    log.Println("Could not accept channel", err)
-    return
-  }
+	// At this point, we have the opportunity to reject the client's
+	// request for another logical connection
+	connection, requests, err := ch.Accept()
+	if err != nil {
+		log.Println("Could not accept channel", err)
+		return
+	}
 
-  commands := inmem.NewSyncQueue("commands")
-  ray := e.rayFunc.Invoke(commands).(base.Folder)
-  outputEnt, ok := ray.Fetch("output")
-  if !ok {
-    panic("wat")
-  }
-  output := outputEnt.(base.Queue)
+	commands := inmem.NewSyncQueue("commands")
+	ray := e.rayFunc.Invoke(commands).(base.Folder)
+
+	outputEnt, ok := ray.Fetch("output")
+	if !ok {
+		panic("wat1")
+	}
+	output := outputEnt.(base.Queue)
+
+	cwdEnt, ok := ray.Fetch("cwd")
+	if !ok {
+		panic("wat2")
+	}
+	cwd := cwdEnt.(base.String)
 
 	term := terminal.NewTerminal(connection, "> ")
 
-  go func() {
-    defer connection.Close()
-    for {
-      entry, ok := output.Next()
-      if !ok {
-        return
-      }
-      line, ok := entry.(base.String).Get()
-      if !ok {
-        log.Println("Ray failed to get string from output", entry)
-        return
-      }
+	go func() {
+		defer connection.Close()
+		for {
+			entry, ok := output.Next()
+			if !ok {
+				return
+			}
+			line, ok := entry.(base.String).Get()
+			if !ok {
+				log.Println("Ray failed to get string from output", entry)
+				return
+			}
 
-      term.Write([]byte(line + "\n"))
-    }
-  }()
+			term.Write([]byte(line + "\n"))
+		}
+	}()
 
-  go func(requests <-chan *ssh.Request) {
-  	hasShell := false
+	go func(requests <-chan *ssh.Request) {
+		hasShell := false
 
-  	for req := range requests {
-  		var width, height int
-  		var ok bool
+		for req := range requests {
+			var width, height int
+			var ok bool
 
-  		switch req.Type {
-  		case "shell":
-  			if !hasShell {
-  				ok = true
-  				hasShell = true
-  			}
-  		case "pty-req":
-  			width, height, ok = parsePtyRequest(req.Payload)
-  			if ok {
-  				// TODO: Hardcode width to 100000?
-  				err := term.SetSize(width, height)
-  				ok = err == nil
-  			}
-  		case "window-change":
-  			width, height, ok = parseWinchRequest(req.Payload)
-  			if ok {
-  				// TODO: Hardcode width to 100000?
-  				err := term.SetSize(width, height)
-  				ok = err == nil
-  			}
-  		}
+			switch req.Type {
+			case "shell":
+				if !hasShell {
+					ok = true
+					hasShell = true
+				}
+			case "pty-req":
+				width, height, ok = parsePtyRequest(req.Payload)
+				if ok {
+					// TODO: Hardcode width to 100000?
+					err := term.SetSize(width, height)
+					ok = err == nil
+				}
+			case "window-change":
+				width, height, ok = parseWinchRequest(req.Payload)
+				if ok {
+					// TODO: Hardcode width to 100000?
+					err := term.SetSize(width, height)
+					ok = err == nil
+				}
+			}
 
-  		if req.WantReply {
-  			req.Reply(ok, nil)
-  		}
-  	}
-  }(requests)
+			if req.WantReply {
+				req.Reply(ok, nil)
+			}
+		}
+	}(requests)
 
 	for {
+		curCwd, ok := cwd.Get()
+		if ok {
+			term.SetPrompt(fmt.Sprintf("%s $ ", curCwd))
+		}
+
 		line, err := term.ReadLine()
 		if err == io.EOF {
 			return
@@ -193,12 +206,12 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel) {
 			log.Println("handleChannel readLine err:", err)
 			continue
 		}
-    if len(line) > 0 {
-      commands.Push(inmem.NewString("ssh-command", line))
-    }
+		if len(line) > 0 {
+			commands.Push(inmem.NewString("ssh-command", line))
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
-
 
 // Helpers below are borrowed from go.crypto circa 2011:
 

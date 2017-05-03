@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
 
 	"github.com/danopia/stardust/wormhole/ddp"
 	//"github.com/danopia/stardust/wormhole/kernel"
@@ -67,25 +67,25 @@ func main() {
 	raySsh.Invoke(ray)
 
 	/*
-	// Get a reference to the config
-	handle.Walk("/boot/cfg")
-	config, ok := handle.GetFolder()
-	if !ok {
-		panic("/boot/cfg wasn't a Directory, make sure Consul driver is working")
-	}
+		// Get a reference to the config
+		handle.Walk("/boot/cfg")
+		config, ok := handle.GetFolder()
+		if !ok {
+			panic("/boot/cfg wasn't a Directory, make sure Consul driver is working")
+		}
 
-	// Start using the config
-	log.Println("boot keys:", boot.Children())
-	log.Println("config keys:", config.Children())
+		// Start using the config
+		log.Println("boot keys:", boot.Children())
+		log.Println("config keys:", config.Children())
 
-	// Run the init script
-	handle.Walk("/boot/init")
-	init, ok := handle.GetString()
-	if !ok {
-		panic("/boot/init wasn't a String, provide an init script and try again")
-	}
+		// Run the init script
+		handle.Walk("/boot/init")
+		init, ok := handle.GetString()
+		if !ok {
+			panic("/boot/init wasn't a String, provide an init script and try again")
+		}
 
-	ray.Invoke(init)
+		ray.Invoke(init)
 	*/
 
 	/*
@@ -112,10 +112,10 @@ func main() {
 
 	//ns.Set("/n/irc/channels/#general/privmsg", "hello")
 
-		host := fmt.Sprint("localhost:", *port)
-		log.Printf("Listening on %s...", host)
-		if err := http.ListenAndServe(host, nil); err != nil {
-			log.Fatal("ListenAndServe: ", err)
-		}
+	host := fmt.Sprint("localhost:", *port)
+	log.Printf("Listening on %s...", host)
+	if err := http.ListenAndServe(host, nil); err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 
 }
