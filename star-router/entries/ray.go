@@ -99,9 +99,45 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	cmd = strings.ToLower(cmd)
 	switch cmd {
 
+	case "help":
+		c.output.Push(inmem.NewString(cmd, "Available commands:"))
+		cmdList := []string{"help", "cat", "cd", "echo", "ls"}
+		for _, cmd := range cmdList {
+			c.output.Push(inmem.NewString(cmd, fmt.Sprintf("  - %s", cmd)))
+		}
+		c.output.Push(inmem.NewString(cmd, ""))
+		c.output.Push(inmem.NewString(cmd, "The shell will exit on any error."))
+		ok = true
+
+	case "cat":
+		ok = true
+		for _, path := range args {
+			temp := c.handle.Clone()
+			if ok = temp.Walk(path); !ok {
+				return
+			}
+			entry := temp.Get()
+
+			switch entry := entry.(type) {
+			case base.String:
+				var value string
+				value, ok = entry.Get()
+				if !ok {
+					return
+				}
+				c.output.Push(inmem.NewString(cmd, value))
+
+			default:
+				ok = false
+				return
+			}
+		}
+
 	case "cd":
 		if len(args) == 1 {
 			ok = c.handle.Walk(args[0])
+		} else if len(args) == 0 {
+			ok = c.handle.Walk("/")
 		}
 
 	case "echo":

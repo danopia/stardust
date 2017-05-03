@@ -50,7 +50,7 @@ func (h *handle) Clone() Handle {
 
 func (h *handle) Stack() (stack []Entry) {
 	stack = make([]Entry, len(h.stack))
-	copy(h.stack, stack)
+	copy(stack, h.stack)
 	return
 }
 
