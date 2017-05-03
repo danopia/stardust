@@ -26,8 +26,16 @@ func (e *raySshFunc) Name() string {
 
 func (e *raySshFunc) Invoke(input base.Entry) (output base.Entry) {
 	service := &raySsh{
-		rayFunc: input.(base.Function), // TODO
+		rayFunc:   input.(base.Function), // TODO
+		tmpFolder: inmem.NewFolder("ray-ssh"),
 	}
+
+	// Put tmpFolder in the ns' /tmp
+	handle := base.RootSpace.NewHandle()
+	handle.Walk("/tmp")
+	tmp, _ := handle.GetFolder()
+	tmp.Put("ray-ssh", service.tmpFolder)
+
 	service.configure()
 	service.start()
 	return nil
@@ -37,6 +45,7 @@ func (e *raySshFunc) Invoke(input base.Entry) (output base.Entry) {
 type raySsh struct {
 	sshConfig *ssh.ServerConfig
 	rayFunc   base.Function
+	tmpFolder base.Folder
 }
 
 func (e *raySsh) configure() {
@@ -94,18 +103,18 @@ func (e *raySsh) start() {
 		log.Printf("New SSH connection from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
 
 		go ssh.DiscardRequests(reqs)
-		go e.handleChannels(chans)
+		go e.handleChannels(chans, fmt.Sprintf("%s", sshConn.RemoteAddr()))
 	}
 }
 
-func (e *raySsh) handleChannels(chans <-chan ssh.NewChannel) {
+func (e *raySsh) handleChannels(chans <-chan ssh.NewChannel, addr string) {
 	// Service the incoming Channel channel in go routine
 	for newChannel := range chans {
-		go e.handleChannel(newChannel)
+		go e.handleChannel(newChannel, addr)
 	}
 }
 
-func (e *raySsh) handleChannel(ch ssh.NewChannel) {
+func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 	// Since we're handling a shell, we expect a
 	// channel type of "session". The also describes
 	// "x11", "direct-tcpip" and "forwarded-tcpip"
@@ -125,6 +134,7 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel) {
 
 	commands := inmem.NewSyncQueue("commands")
 	ray := e.rayFunc.Invoke(commands).(base.Folder)
+	e.tmpFolder.Put(addr, ray)
 
 	outputEnt, ok := ray.Fetch("output")
 	if !ok {

@@ -101,8 +101,8 @@ func (h *handle) SelectName(name string) (ok bool) {
 
 	case "..":
 		if len(h.stack) > 1 {
-			h.stack = h.stack[:len(h.stack)-2]
-			h.names = h.names[:len(h.stack)-2]
+			h.stack = h.stack[:len(h.stack)-1]
+			h.names = h.names[:len(h.names)-1]
 		}
 		ok = true
 

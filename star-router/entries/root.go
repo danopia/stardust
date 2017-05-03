@@ -10,6 +10,7 @@ func NewRootEntry() *inmem.Folder {
 	root.Put("rom", newRomEntry())
 	root.Put("boot", newBootEntry())
 	root.Put("n", inmem.NewFolder("n"))
+	root.Put("tmp", inmem.NewFolder("tmp"))
 	return root
 }
 
