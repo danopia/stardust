@@ -55,6 +55,7 @@ type File interface {
 type Queue interface {
 	Entry
 	Push(value Entry) (ok bool)
+	Close()
 	Next() (value Entry, ok bool)    // waits for the next value
 	TryNext() (value Entry, ok bool) // gets next value if one is waiting
 }

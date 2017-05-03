@@ -34,6 +34,9 @@ func NewBufferedQueue(name string, buffer int) *Queue {
 
 // Prevents this queue from ever receiving new entries
 func (e *Queue) Close() {
+	if e.writable {
+		close(e.channel)
+	}
 	e.writable = false
 }
 

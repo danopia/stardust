@@ -78,22 +78,22 @@ func main() {
 	ray.Invoke(init)
 
 	/*
-		ns.AddDevice("/rom/drv/irc", devices.NewDriverDevice(devices.NewIrcDevice))
-		ns.AddDevice("/rom/drv/consul", devices.NewDriverDevice(devices.NewConsulDevice))
+			ns.AddDevice("/rom/drv/irc", devices.NewDriverDevice(devices.NewIrcDevice))
+			ns.AddDevice("/rom/drv/consul", devices.NewDriverDevice(devices.NewConsulDevice))
 
-		ns.Copy("/rom/drv/consul/clone", "/cfg")
+			ns.Copy("/rom/drv/consul/clone", "/cfg")
 
-		ns.Copy("/rom/drv/irc/clone", "/n/irc")
-		ns.Set("/n/irc/nickname", "star-router")
-		ns.Set("/n/irc/username", "stardust")
-		ns.Set("/n/irc/server", "irc.stardustapp.run:6667")
-		ns.Set("/n/irc/channel-list", []string{ "#general" })
+			ns.Copy("/rom/drv/irc/clone", "/n/irc")
+			ns.Set("/n/irc/nickname", "star-router")
+			ns.Set("/n/irc/username", "stardust")
+			ns.Set("/n/irc/server", "irc.stardustapp.run:6667")
+			ns.Set("/n/irc/channel-list", []string{ "#general" })
 
-		ns.Copy("/rom/drv/irc/clone", "/n/freenode")
-		//ns.Set("/n/freenode/nickname", "star-router")
-		ns.Set("/n/freenode/username", "stardust")
-	  ns.Set("/n/freenode/server", "chat.freenode.net:6667")
-		ns.Set("/n/freenode/channel-list", []string{ "##stardust" })
+			ns.Copy("/rom/drv/irc/clone", "/n/freenode")
+			//ns.Set("/n/freenode/nickname", "star-router")
+			ns.Set("/n/freenode/username", "stardust")
+		  ns.Set("/n/freenode/server", "chat.freenode.net:6667")
+			ns.Set("/n/freenode/channel-list", []string{ "##stardust" })
 	*/
 
 	//kernel.Start()
