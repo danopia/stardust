@@ -193,8 +193,8 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel) {
 	}(requests)
 
 	for {
-    term.Write([]byte("\n"))
-    
+		term.Write([]byte("\n"))
+
 		curCwd, ok := cwd.Get()
 		if ok {
 			term.SetPrompt(fmt.Sprintf("%s $ ", curCwd))

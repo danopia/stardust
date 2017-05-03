@@ -1,10 +1,12 @@
 package entries
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/inmem"
 	"github.com/hashicorp/consul/api"
-	"strings"
 )
 
 // Directory containing the clone function
@@ -86,11 +88,27 @@ func (e *consulKV) Name() string {
 	}
 }
 func (e *consulKV) Children() []string {
-	keys, _, err := e.kv.Keys(e.path, "/", nil)
+	// Calculate consule key prefix
+	prefix := ""
+	if len(e.path) > 0 {
+		prefix = fmt.Sprintf("%s/", e.path)
+	}
+
+	// Get list of keys matching the prefix
+	keys, _, err := e.kv.Keys(prefix, "/", nil)
 	if err != nil {
 		panic(err)
 	}
-	return keys
+
+	// Filter down to basenames
+	children := make([]string, 0, len(keys))
+	for _, key := range keys {
+		baseName := key[len(prefix):]
+		if len(baseName) > 0 {
+			children = append(children, strings.TrimRight(baseName, "/"))
+		}
+	}
+	return children
 }
 
 // this always works
