@@ -43,8 +43,8 @@ func (h *handle) Clone() Handle {
 		stack: make([]Entry, len(h.stack)),
 		names: make([]string, len(h.names)),
 	}
-	copy(h.stack, newH.stack)
-	copy(h.names, newH.names)
+	copy(newH.stack, h.stack)
+	copy(newH.names, h.names)
 	return newH
 }
 

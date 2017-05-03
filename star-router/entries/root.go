@@ -21,6 +21,7 @@ func newRomEntry() *inmem.Folder {
 
 	bin := inmem.NewFolder("bin")
 	bin.Put("ray", &rayFunc{})
+	bin.Put("ray-ssh", &raySshFunc{})
 	bin.Freeze()
 
 	rom := inmem.NewFolder("rom")

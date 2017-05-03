@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	//"fmt"
+	"fmt"
 
 	"github.com/danopia/stardust/wormhole/ddp"
 	//"github.com/danopia/stardust/wormhole/kernel"
@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	//var port = flag.Int("port", 9234, "TCP port that the wormhole should be available on")
+	var port = flag.Int("port", 9234, "TCP port that the wormhole should be available on")
 	//var secret = flag.String("secret", "none", "Secret token, for id and auth")
 	flag.Parse()
 
@@ -29,6 +29,13 @@ func main() {
 	ray, ok := handle.GetFunction()
 	if !ok {
 		panic("Ray executable not found. That shouldn't happen.")
+	}
+
+	// Get Ray's SSH server executable from /rom/bin
+	handle.Walk("/rom/bin/ray-ssh")
+	raySsh, ok := handle.GetFunction()
+	if !ok {
+		panic("Ray-SSH executable not found. That shouldn't happen.")
 	}
 
 	// Get the Consul driver in /rom/drv
@@ -57,6 +64,9 @@ func main() {
 	handle.Walk("consul/kv")
 	boot.Put("cfg", handle.Get())
 
+	raySsh.Invoke(ray)
+
+	/*
 	// Get a reference to the config
 	handle.Walk("/boot/cfg")
 	config, ok := handle.GetFolder()
@@ -76,6 +86,7 @@ func main() {
 	}
 
 	ray.Invoke(init)
+	*/
 
 	/*
 			ns.AddDevice("/rom/drv/irc", devices.NewDriverDevice(devices.NewIrcDevice))
@@ -101,12 +112,10 @@ func main() {
 
 	//ns.Set("/n/irc/channels/#general/privmsg", "hello")
 
-	/*
 		host := fmt.Sprint("localhost:", *port)
 		log.Printf("Listening on %s...", host)
 		if err := http.ListenAndServe(host, nil); err != nil {
 			log.Fatal("ListenAndServe: ", err)
 		}
-	*/
 
 }

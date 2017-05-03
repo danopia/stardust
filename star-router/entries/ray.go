@@ -17,17 +17,17 @@ type rayCtx struct {
 	commands base.Queue
 	output   base.Queue
 	result   base.Queue
-	scope    base.Folder
+	environ  base.Folder
 
 	handle base.Handle
 }
 
-func newRayCtx() *rayCtx {
+func newRayCtx(cmdQueue base.Queue) *rayCtx {
 	return &rayCtx{
-		commands: inmem.NewSyncQueue("commands"),
+		commands: cmdQueue,
 		output:   inmem.NewBufferedQueue("output", 10),
-		result:   inmem.NewBufferedQueue("commands", 1),
-		scope:    inmem.NewFolder("scope"),
+		result:   inmem.NewBufferedQueue("result", 1),
+		environ:  inmem.NewFolder("environ"),
 		handle:   base.RootSpace.NewHandle(),
 	}
 }
@@ -67,7 +67,7 @@ func (c *rayCtx) getBundle() base.Folder {
 	folder.Put("commands", c.commands)
 	folder.Put("output", c.output)
 	folder.Put("result", c.result)
-	folder.Put("scope", c.scope)
+	folder.Put("environ", c.environ)
 	folder.Freeze()
 	return folder
 }
@@ -117,7 +117,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	return
 }
 
-// Function that creates a new consul client when invoked
+// Function that creates a new ray shell when invoked
 type rayFunc struct{}
 
 var _ base.Function = (*rayFunc)(nil)
@@ -128,29 +128,39 @@ func (e *rayFunc) Name() string {
 
 func (e *rayFunc) Invoke(input base.Entry) (output base.Entry) {
 	// Start a new command evaluator
-	ctx := newRayCtx()
+	ctx := newRayCtx(inmem.NewSyncQueue("commands"))
 
-	go func(ctx *rayCtx) {
-		str := input.(base.String)
-		script, ok := str.Get()
-		if !ok {
-			panic("Ray couldn't get script contents")
-		}
+	switch input := input.(type) {
+	case base.String:
 
-		lines := strings.Split(script, "\n")
-		for _, raw := range lines {
-			line := strings.Trim(raw, " \t")
-			if len(line) == 0 {
-				continue
+		go func(ctx *rayCtx) {
+			script, ok := input.Get()
+			if !ok {
+				panic("Ray couldn't get script contents")
 			}
 
-			ctx.commands.Push(inmem.NewString("ray-input", line))
-		}
-		ctx.commands.Close()
-	}(ctx)
+			lines := strings.Split(script, "\n")
+			for _, raw := range lines {
+				line := strings.Trim(raw, " \t")
+				if len(line) == 0 {
+					continue
+				}
+
+				ctx.commands.Push(inmem.NewString("ray-input", line))
+			}
+			ctx.commands.Close()
+		}(ctx)
+
+	case base.Queue:
+		ctx.commands = input // TODO: do this earlier
+
+	default:
+		log.Println("Ray can't deal with input", input)
+		panic("Ray got weird input")
+	}
 
 	go ctx.pumpCommands()
-	ctx.writeOutputToStdout()
+	//ctx.writeOutputToStdout()
 	return ctx.getBundle()
 }
 
