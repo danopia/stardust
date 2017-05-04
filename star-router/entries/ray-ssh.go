@@ -69,6 +69,7 @@ func (e *raySsh) configure() {
 }
 
 func (e *raySsh) checkPassword(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
+	log.Println("Login attempt for", c.User(), "-", string(pass))
 	if c.User() == "star" && string(pass) == "dust" {
 		return nil, nil
 	}
