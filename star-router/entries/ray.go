@@ -86,14 +86,13 @@ func (c *rayCtx) pumpCommands() {
 }
 
 func (c *rayCtx) getBundle() base.Folder {
-	folder := inmem.NewFolder("ray-invocation")
-	folder.Put("commands", c.commands)
-	folder.Put("output", c.output)
-	folder.Put("result", c.result)
-	folder.Put("environ", c.environ)
-	folder.Put("cwd", c.cwd)
-	folder.Freeze()
-	return folder
+	return inmem.NewFolderOf("ray-invocation",
+		c.commands,
+		c.output,
+		c.result,
+		c.environ,
+		c.cwd,
+	).Freeze()
 }
 
 func (c *rayCtx) writeOut(label, line string) {
@@ -108,10 +107,10 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 		c.output.Push(inmem.NewString(cmd, "Available commands:"))
 		cmdList := []string{"help", "cat", "cd", "echo", "ls", "invoke"}
 		for _, cmd := range cmdList {
-			c.output.Push(inmem.NewString(cmd, fmt.Sprintf("  - %s", cmd)))
+			c.writeOut(cmd, fmt.Sprintf("  - %s", cmd))
 		}
-		c.output.Push(inmem.NewString(cmd, ""))
-		c.output.Push(inmem.NewString(cmd, "The shell will exit on any error."))
+		c.writeOut(cmd, "")
+		c.writeOut(cmd, "The shell will exit on any error.")
 		ok = true
 
 	case "cat":
@@ -130,7 +129,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 				if !ok {
 					return
 				}
-				c.output.Push(inmem.NewString(cmd, value))
+				c.writeOut(cmd, value)
 
 			default:
 				c.writeOut(cmd, "Name wasn't a type that you can cat")
@@ -185,7 +184,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 	case "echo":
 		text := strings.Join(args, " ")
-		c.output.Push(inmem.NewString(cmd, text))
+		c.writeOut(cmd, text)
 		ok = true
 
 	case "ls":
@@ -210,11 +209,11 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 		// TODO: can't this fail?
 		names := folder.Children()
 		text := strings.Join(names, "\t")
-		c.output.Push(inmem.NewString(cmd, text))
+		c.writeOut(cmd, text)
 
 	default:
 		text := fmt.Sprintf("No such command: %v", cmd)
-		c.output.Push(inmem.NewString(cmd, text))
+		c.writeOut(cmd, text)
 	}
 	return
 }

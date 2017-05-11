@@ -11,10 +11,7 @@ import (
 
 // Directory containing the clone function
 func getConsulDriver() *inmem.Folder {
-	driver := inmem.NewFolder("consul")
-	driver.Put("clone", &consulClone{})
-	driver.Freeze()
-	return driver
+	return inmem.NewFolderOf("consul", &consulClone{}).Freeze()
 }
 
 // Function that creates a new consul client when invoked

@@ -13,10 +13,7 @@ import (
 
 // Directory containing the clone function
 func getAwsDriver() *inmem.Folder {
-	driver := inmem.NewFolder("aws")
-	driver.Put("clone", &awsClone{})
-	driver.Freeze()
-	return driver
+	return inmem.NewFolderOf("aws", &awsClone{}).Freeze()
 }
 
 // Function that creates a new AWS client when invoked
@@ -158,12 +155,11 @@ func (e *awsSqsReceiveMessage) Invoke(input base.Entry) (output base.Entry) {
 		}
 
 		msg := resp.Messages[0]
-		outputFolder := inmem.NewFolder("received-message")
-		outputFolder.Put("msg-id", inmem.NewString("msg-id", *msg.MessageId))
-		outputFolder.Put("body", inmem.NewString("body", *msg.Body))
-		outputFolder.Put("handle", inmem.NewString("handle", *msg.ReceiptHandle))
-		outputFolder.Freeze()
-		return outputFolder
+		return inmem.NewFolderOf("received-message",
+			inmem.NewString("msg-id", *msg.MessageId),
+			inmem.NewString("body", *msg.Body),
+			inmem.NewString("handle", *msg.ReceiptHandle),
+		).Freeze()
 	}
 	return nil
 }

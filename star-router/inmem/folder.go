@@ -23,9 +23,24 @@ func NewFolder(name string) *Folder {
 	}
 }
 
+func NewFolderOf(name string, children ...base.Entry) *Folder {
+	ent := &Folder{
+		name:     name,
+		writable: true,
+		children: make(map[string]base.Entry),
+	}
+
+	for _, child := range children {
+		ent.Put(child.Name(), child)
+	}
+	return ent
+}
+
 // Prevents the directory of names in this folder from ever changing again
-func (e *Folder) Freeze() {
+// Chainable for NewFolderOf(...).Freeze()
+func (e *Folder) Freeze() *Folder {
 	e.writable = false
+	return e
 }
 
 func (e *Folder) Name() string {
