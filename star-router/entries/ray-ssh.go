@@ -133,8 +133,12 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 		return
 	}
 
-	commands := inmem.NewSyncQueue("commands")
-	ray := e.rayFunc.Invoke(commands).(base.Folder)
+	ray := e.rayFunc.Invoke(nil).(base.Folder)
+	cmdEntry, ok := ray.Fetch("commands")
+	if !ok {
+		panic("wat0")
+	}
+	commands := cmdEntry.(base.Queue)
 	e.tmpFolder.Put(addr, ray)
 
 	outputEnt, ok := ray.Fetch("output")

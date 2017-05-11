@@ -43,9 +43,9 @@ type rayCtx struct {
 	handle base.Handle
 }
 
-func newRayCtx(cmdQueue base.Queue) *rayCtx {
+func newRayCtx() *rayCtx {
 	ctx := &rayCtx{
-		commands: cmdQueue,
+		commands: inmem.NewSyncQueue("commands"),
 		output:   inmem.NewBufferedQueue("output", 10),
 		result:   inmem.NewBufferedQueue("result", 1),
 		environ:  inmem.NewFolder("environ"),
@@ -229,7 +229,7 @@ func (e *rayFunc) Name() string {
 
 func (e *rayFunc) Invoke(input base.Entry) (output base.Entry) {
 	// Start a new command evaluator
-	ctx := newRayCtx(inmem.NewSyncQueue("commands"))
+	ctx := newRayCtx()
 
 	switch input := input.(type) {
 	case base.String:
