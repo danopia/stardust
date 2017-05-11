@@ -23,7 +23,7 @@ func newRomEntry() *inmem.Folder {
 
 	bin := inmem.NewFolderOf("bin",
 		&rayFunc{},
-	  &raySshFunc{},
+		&raySshFunc{},
 	).Freeze()
 
 	return inmem.NewFolderOf("rom",
