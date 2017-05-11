@@ -44,6 +44,7 @@ func (e *raySshFunc) Invoke(input base.Entry) (output base.Entry) {
 // Context for a running SSH server
 type raySsh struct {
 	sshConfig *ssh.ServerConfig
+	listener  net.Listener
 	rayFunc   base.Function
 	tmpFolder base.Folder
 }
@@ -83,12 +84,17 @@ func (e *raySsh) start() {
 	if err != nil {
 		log.Fatalf("failed to listen for connection: %+v", err)
 	}
+	e.listener = listener
 
 	log.Println("Listening for SSH on port 2022")
+	go e.run()
+}
+
+func (e *raySsh) run() {
 	for {
 		// A ServerConn multiplexes several channels, which must
 		// themselves be Accepted.
-		tcpConn, err := listener.Accept()
+		tcpConn, err := e.listener.Accept()
 		if err != nil {
 			log.Println("failed to accept incoming connection", err)
 			continue

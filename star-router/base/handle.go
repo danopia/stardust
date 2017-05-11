@@ -93,7 +93,7 @@ func (h *handle) Path() string {
 }
 
 func (h *handle) SelectName(name string) (ok bool) {
-	log.Println("Selecting name", name, "from within", h.Path())
+	//log.Println("Selecting name", name, "from within", h.Path())
 	switch name {
 
 	case ".":

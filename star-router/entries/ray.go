@@ -3,6 +3,7 @@ package entries
 import (
 	"fmt"
 	"log"
+	"path"
 	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
@@ -95,6 +96,10 @@ func (c *rayCtx) getBundle() base.Folder {
 	return folder
 }
 
+func (c *rayCtx) writeOut(label, line string) {
+	c.output.Push(inmem.NewString(label, line))
+}
+
 func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	cmd = strings.ToLower(cmd)
 	switch cmd {
@@ -128,9 +133,47 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 				c.output.Push(inmem.NewString(cmd, value))
 
 			default:
+				c.writeOut(cmd, "Name wasn't a type that you can cat")
 				ok = false
 				return
 			}
+		}
+
+	case "invoke":
+		if len(args) == 0 {
+			c.writeOut(cmd, "Not enough args for invoke")
+			return
+		}
+
+		temp := c.handle.Clone()
+		if ok = temp.Walk(args[0]); !ok {
+			c.writeOut(cmd, fmt.Sprintf("Couldn't find function named %s", args[0]))
+			return
+		}
+		function := temp.Get().(base.Function)
+
+		var input base.Entry
+		if len(args) >= 2 {
+			temp := c.handle.Clone()
+			if ok = temp.Walk(args[1]); !ok {
+				c.writeOut(cmd, fmt.Sprintf("Couldn't find input named %s", args[1]))
+				return
+			}
+			input = temp.Get()
+		}
+
+		output := function.Invoke(input)
+
+		if len(args) >= 3 && output != nil {
+			parentDir := path.Dir(args[2])
+			temp := c.handle.Clone()
+			if ok = temp.Walk(parentDir); !ok {
+				c.writeOut(cmd, fmt.Sprintf("Couldn't find output parent named %s", parentDir))
+				return
+			}
+			outputParent := temp.Get().(base.Folder)
+			outputParent.Put(path.Base(args[2]), output)
+			c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
 		}
 
 	case "cd":
@@ -218,8 +261,8 @@ func (e *rayFunc) Invoke(input base.Entry) (output base.Entry) {
 		panic("Ray got weird input")
 	}
 
+	go ctx.writeOutputToStdout() // TODO
 	go ctx.pumpCommands()
-	//ctx.writeOutputToStdout()
 	return ctx.getBundle()
 }
 

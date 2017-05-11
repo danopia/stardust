@@ -31,13 +31,6 @@ func main() {
 		panic("Ray executable not found. That shouldn't happen.")
 	}
 
-	// Get Ray's SSH server executable from /rom/bin
-	handle.Walk("/rom/bin/ray-ssh")
-	raySsh, ok := handle.GetFunction()
-	if !ok {
-		panic("Ray-SSH executable not found. That shouldn't happen.")
-	}
-
 	// Get the Consul driver in /rom/drv
 	handle.Walk("/rom/drv/consul/clone")
 	consulClone, ok := handle.GetFunction()
@@ -64,36 +57,15 @@ func main() {
 	handle.Walk("consul/kv")
 	boot.Put("cfg", handle.Get())
 
-	raySsh.Invoke(ray)
+	// Run the init script
+	handle.Walk("/boot/cfg/init-script")
+	init, ok := handle.GetString()
+	if !ok {
+		panic("/boot/cfg/init-script wasn't a String, provide an init script and try again")
+	}
+	ray.Invoke(init)
 
 	/*
-		// Get a reference to the config
-		handle.Walk("/boot/cfg")
-		config, ok := handle.GetFolder()
-		if !ok {
-			panic("/boot/cfg wasn't a Directory, make sure Consul driver is working")
-		}
-
-		// Start using the config
-		log.Println("boot keys:", boot.Children())
-		log.Println("config keys:", config.Children())
-
-		// Run the init script
-		handle.Walk("/boot/init")
-		init, ok := handle.GetString()
-		if !ok {
-			panic("/boot/init wasn't a String, provide an init script and try again")
-		}
-
-		ray.Invoke(init)
-	*/
-
-	/*
-			ns.AddDevice("/rom/drv/irc", devices.NewDriverDevice(devices.NewIrcDevice))
-			ns.AddDevice("/rom/drv/consul", devices.NewDriverDevice(devices.NewConsulDevice))
-
-			ns.Copy("/rom/drv/consul/clone", "/cfg")
-
 			ns.Copy("/rom/drv/irc/clone", "/n/irc")
 			ns.Set("/n/irc/nickname", "star-router")
 			ns.Set("/n/irc/username", "stardust")
@@ -107,10 +79,7 @@ func main() {
 			ns.Set("/n/freenode/channel-list", []string{ "##stardust" })
 	*/
 
-	//kernel.Start()
 	log.Println("Kernel booted successfully")
-
-	//ns.Set("/n/irc/channels/#general/privmsg", "hello")
 
 	host := fmt.Sprint("localhost:", *port)
 	log.Printf("Listening on %s...", host)

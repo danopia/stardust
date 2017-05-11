@@ -17,6 +17,7 @@ func NewRootEntry() *inmem.Folder {
 // Presents a read-only name with compiled-in children
 func newRomEntry() *inmem.Folder {
 	drivers := inmem.NewFolder("drv")
+	drivers.Put("aws", getAwsDriver())
 	drivers.Put("consul", getConsulDriver())
 	drivers.Freeze()
 
@@ -36,11 +37,7 @@ func newRomEntry() *inmem.Folder {
 func newBootEntry() *inmem.Folder {
 	boot := inmem.NewFolder("boot")
 	boot.Put("init", inmem.NewString("init", `
-    cd /
-    ls
-    cd rom
-    ls
-    echo "Hello World!"
+		invoke /rom/bin/ray-ssh /rom/bin/ray
   `))
 	return boot
 }
