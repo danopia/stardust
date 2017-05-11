@@ -106,7 +106,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 	case "help":
 		c.output.Push(inmem.NewString(cmd, "Available commands:"))
-		cmdList := []string{"help", "cat", "cd", "echo", "ls"}
+		cmdList := []string{"help", "cat", "cd", "echo", "ls", "invoke"}
 		for _, cmd := range cmdList {
 			c.output.Push(inmem.NewString(cmd, fmt.Sprintf("  - %s", cmd)))
 		}

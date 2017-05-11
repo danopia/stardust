@@ -30,15 +30,9 @@ func (e *raySshFunc) Invoke(input base.Entry) (output base.Entry) {
 		tmpFolder: inmem.NewFolder("ray-ssh"),
 	}
 
-	// Put tmpFolder in the ns' /tmp
-	handle := base.RootSpace.NewHandle()
-	handle.Walk("/tmp")
-	tmp, _ := handle.GetFolder()
-	tmp.Put("ray-ssh", service.tmpFolder)
-
 	service.configure()
 	service.start()
-	return nil
+	return service.tmpFolder
 }
 
 // Context for a running SSH server
