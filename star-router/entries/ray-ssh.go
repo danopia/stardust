@@ -145,7 +145,8 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 	if !ok {
 		panic("wat1")
 	}
-	output := outputEnt.(base.Queue)
+	outputLog := outputEnt.(base.Log)
+	output := outputLog.Subscribe(nil)
 
 	cwdEnt, ok := ray.Fetch("cwd")
 	if !ok {

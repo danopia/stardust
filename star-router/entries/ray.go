@@ -35,21 +35,22 @@ func (e *handlePathString) Set(value string) (ok bool) {
 
 type rayCtx struct {
 	commands base.Queue
-	output   base.Queue
-	result   base.Queue
-	environ  base.Folder
-	cwd      base.String
+	output   base.Log
+	//result   base.Queue
+	environ base.Folder
+	cwd     base.String
 
 	handle base.Handle
 }
 
 func newRayCtx() *rayCtx {
+	log.Println("Starting new Ray")
 	ctx := &rayCtx{
 		commands: inmem.NewSyncQueue("commands"),
-		output:   inmem.NewBufferedQueue("output", 10),
-		result:   inmem.NewBufferedQueue("result", 1),
-		environ:  inmem.NewFolder("environ"),
-		handle:   base.RootSpace.NewHandle(),
+		output:   inmem.NewLog("output"),
+		//result:   inmem.NewBufferedQueue("result", 1),
+		environ: inmem.NewFolder("environ"),
+		handle:  base.RootSpace.NewHandle(),
 	}
 	ctx.cwd = &handlePathString{ctx.handle}
 	return ctx
@@ -89,14 +90,14 @@ func (c *rayCtx) getBundle() base.Folder {
 	return inmem.NewFolderOf("ray-invocation",
 		c.commands,
 		c.output,
-		c.result,
+		//c.result,
 		c.environ,
 		c.cwd,
 	).Freeze()
 }
 
 func (c *rayCtx) writeOut(label, line string) {
-	c.output.Push(inmem.NewString(label, line))
+	c.output.Append(inmem.NewString(label, line))
 }
 
 func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
@@ -104,7 +105,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	switch cmd {
 
 	case "help":
-		c.output.Push(inmem.NewString(cmd, "Available commands:"))
+		c.writeOut(cmd, "Available commands:")
 		cmdList := []string{"help", "cat", "cd", "echo", "ls", "invoke"}
 		for _, cmd := range cmdList {
 			c.writeOut(cmd, fmt.Sprintf("  - %s", cmd))
@@ -252,12 +253,14 @@ func (e *rayFunc) Invoke(input base.Entry) (output base.Entry) {
 			ctx.commands.Close()
 		}(ctx)
 
-	case base.Queue:
-		ctx.commands = input // TODO: do this earlier
+	//case base.Queue:
+	//	ctx.commands = input // TODO: do this earlier
 
 	default:
-		log.Println("Ray can't deal with input", input)
-		panic("Ray got weird input")
+		if input != nil {
+			log.Println("Ray can't deal with input", input)
+			panic("Ray got weird input")
+		}
 	}
 
 	go ctx.writeOutputToStdout() // TODO
@@ -266,8 +269,9 @@ func (e *rayFunc) Invoke(input base.Entry) (output base.Entry) {
 }
 
 func (c *rayCtx) writeOutputToStdout() {
+	sub := c.output.Subscribe(nil)
 	for {
-		entry, ok := c.output.Next()
+		entry, ok := sub.Next()
 		if !ok {
 			return
 		}

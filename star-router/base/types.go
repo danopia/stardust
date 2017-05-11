@@ -63,11 +63,11 @@ type Queue interface {
 // A node maintaining an append-only log of Entries.
 // It's up to the implementation how long old entries are kept.
 // (PS: should be compatible with AWS Kinesis)
-// TODO: rename Log
-type Journal interface {
+type Log interface {
 	Entry
-	Push(value Entry) (ok bool)
-	Next() (value Entry, ok bool) // waits for the next value
+	Append(value Entry) (ok bool)
+	Close()
+	Subscribe(opts Entry) (sub Queue) // writes values into dest
 }
 
 // TODO: this shouldn't be baked in, right?

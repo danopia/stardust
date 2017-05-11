@@ -18,7 +18,7 @@ type Handle interface {
 	GetString() (entry String, ok bool)
 	GetFile() (entry File, ok bool)
 	GetQueue() (entry Queue, ok bool)
-	GetJournal() (entry Journal, ok bool)
+	GetLog() (entry Log, ok bool)
 
 	Clone() Handle
 	SelectName(name string) (ok bool)
@@ -83,8 +83,8 @@ func (h *handle) GetQueue() (entry Queue, ok bool) {
 	entry, ok = h.Get().(Queue)
 	return
 }
-func (h *handle) GetJournal() (entry Journal, ok bool) {
-	entry, ok = h.Get().(Journal)
+func (h *handle) GetLog() (entry Log, ok bool) {
+	entry, ok = h.Get().(Log)
 	return
 }
 
