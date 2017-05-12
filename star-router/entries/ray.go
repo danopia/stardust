@@ -106,12 +106,15 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 	case "help":
 		c.writeOut(cmd, "Available commands:")
-		cmdList := []string{"help", "cat", "cd", "echo", "ls", "invoke"}
+		cmdList := []string{"help", "cat", "cd", "echo", "ls", "invoke", ":"}
 		for _, cmd := range cmdList {
 			c.writeOut(cmd, fmt.Sprintf("  - %s", cmd))
 		}
 		c.writeOut(cmd, "")
 		c.writeOut(cmd, "The shell will exit on any error.")
+		ok = true
+
+	case ":":
 		ok = true
 
 	case "cat":

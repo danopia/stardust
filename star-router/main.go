@@ -24,11 +24,11 @@ func main() {
 	base.RootSpace = ns
 	handle := ns.NewHandle()
 
-	// Get the Ray executable from /rom/bin
-	handle.Walk("/rom/bin/ray")
-	ray, ok := handle.GetFunction()
+	// Get the Init executable from /rom/bin
+	handle.Walk("/rom/bin/init")
+	init, ok := handle.GetFunction()
 	if !ok {
-		panic("Ray executable not found. That shouldn't happen.")
+		panic("Init executable not found. That shouldn't happen.")
 	}
 
 	// Get the Consul driver in /rom/drv
@@ -57,13 +57,15 @@ func main() {
 	handle.Walk("consul/kv")
 	boot.Put("cfg", handle.Get())
 
-	// Run the init script
-	handle.Walk("/boot/cfg/init-script")
-	init, ok := handle.GetString()
+	// Get the init config
+	handle.Walk("/boot/cfg/services")
+	services, ok := handle.GetFolder()
 	if !ok {
-		panic("/boot/cfg/init-script wasn't a String, provide an init script and try again")
+		panic("/boot/cfg/services wasn't a Folder, provide services and try again")
 	}
-	ray.Invoke(init)
+
+	// Run init
+	init.Invoke(services)
 
 	/*
 			ns.Copy("/rom/drv/irc/clone", "/n/irc")
