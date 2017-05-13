@@ -223,15 +223,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 }
 
 // Function that creates a new ray shell when invoked
-type rayFunc struct{}
-
-var _ base.Function = (*rayFunc)(nil)
-
-func (e *rayFunc) Name() string {
-	return "ray"
-}
-
-func (e *rayFunc) Invoke(input base.Entry) (output base.Entry) {
+func rayFunc(input base.Entry) (output base.Entry) {
 	// Start a new command evaluator
 	ctx := newRayCtx()
 

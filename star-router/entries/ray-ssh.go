@@ -16,15 +16,7 @@ import (
 )
 
 // Function that creates a new ray shell when invoked
-type raySshFunc struct{}
-
-var _ base.Function = (*raySshFunc)(nil)
-
-func (e *raySshFunc) Name() string {
-	return "ray-ssh"
-}
-
-func (e *raySshFunc) Invoke(input base.Entry) (output base.Entry) {
+func raySshFunc(input base.Entry) (output base.Entry) {
 	service := &raySsh{
 		rayFunc:   input.(base.Function), // TODO
 		tmpFolder: inmem.NewFolder("ray-ssh"),

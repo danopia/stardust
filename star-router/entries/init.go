@@ -11,15 +11,7 @@ import (
 )
 
 // Function that creates a new ray shell when invoked
-type initFunc struct{}
-
-var _ base.Function = (*initFunc)(nil)
-
-func (e *initFunc) Name() string {
-	return "init"
-}
-
-func (e *initFunc) Invoke(input base.Entry) (output base.Entry) {
+func initFunc (input base.Entry) (output base.Entry) {
 	log.Println("Loading init process...")
 
 	s := &initSvc{

@@ -11,19 +11,13 @@ import (
 
 // Directory containing the clone function
 func getConsulDriver() *inmem.Folder {
-	return inmem.NewFolderOf("consul", &consulClone{}).Freeze()
+	return inmem.NewFolderOf("consul",
+		inmem.NewFunction("clone", startConsul),
+	).Freeze()
 }
 
-// Function that creates a new consul client when invoked
-type consulClone struct{}
-
-var _ base.Function = (*consulClone)(nil)
-
-func (e *consulClone) Name() string {
-	return "clone"
-}
-
-func (e *consulClone) Invoke(input base.Entry) (output base.Entry) {
+// Function that creates a new Consul client when invoked
+func startConsul(input base.Entry) (output base.Entry) {
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		panic(err)
