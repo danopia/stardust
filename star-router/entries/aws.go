@@ -1,13 +1,12 @@
 package entries
 
 import (
-	"log"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/danopia/stardust/star-router/base"
+	"github.com/danopia/stardust/star-router/helpers"
 	"github.com/danopia/stardust/star-router/inmem"
 )
 
@@ -27,29 +26,12 @@ func (e *awsClone) Name() string {
 
 func (e *awsClone) Invoke(input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
+	accessKey, _ := helpers.GetChildString(inputFolder, "access_key_id")
+	secretKey, _ := helpers.GetChildString(inputFolder, "secret_access_key")
+	sessionToken, _ := helpers.GetChildString(inputFolder, "session_token")
+	region, _ := helpers.GetChildString(inputFolder, "region")
 
-	accessKeyEntry, ok := inputFolder.Fetch("access_key_id")
-	if !ok {
-		log.Println("no aws creds")
-		return nil
-	}
-	accessKey, ok := accessKeyEntry.(base.String).Get()
-
-	secretKeyEntry, ok := inputFolder.Fetch("secret_access_key")
-	if !ok {
-		log.Println("no aws secret creds")
-		return nil
-	}
-	secretKey, ok := secretKeyEntry.(base.String).Get()
-
-	regionEntry, ok := inputFolder.Fetch("region")
-	if !ok {
-		log.Println("no aws region")
-		return nil
-	}
-	region, ok := regionEntry.(base.String).Get()
-
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, sessionToken)
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
@@ -136,13 +118,7 @@ func (e *awsSqsReceiveMessage) Name() string {
 
 func (e *awsSqsReceiveMessage) Invoke(input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-
-	queueUrlEntry, ok := inputFolder.Fetch("queue-url")
-	if !ok {
-		log.Println("no queue url")
-		return nil
-	}
-	queueUrl, ok := queueUrlEntry.(base.String).Get()
+	queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
 
 	params := &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(queueUrl),

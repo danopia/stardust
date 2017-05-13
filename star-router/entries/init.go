@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/danopia/stardust/star-router/base"
+	"github.com/danopia/stardust/star-router/helpers"
 	"github.com/danopia/stardust/star-router/inmem"
 )
 
@@ -66,11 +67,7 @@ var _ base.Folder = (*initSvc)(nil)
 func (s *initSvc) start(svc *service) {
 	svc.running = true
 
-	pathEntry, ok := svc.cfgDir.Fetch("path")
-	if !ok {
-		return
-	}
-	runPath, ok := pathEntry.(base.String).Get()
+	runPath, ok := helpers.GetChildString(svc.cfgDir, "path")
 	if !ok {
 		return
 	}
@@ -82,11 +79,7 @@ func (s *initSvc) start(svc *service) {
 		return
 	}
 
-	inputPathEntry, ok := svc.cfgDir.Fetch("input-path")
-	if !ok {
-		return
-	}
-	inputPath, ok := inputPathEntry.(base.String).Get()
+	inputPath, ok := helpers.GetChildString(svc.cfgDir, "input-path")
 	if !ok {
 		return
 	}
@@ -100,11 +93,7 @@ func (s *initSvc) start(svc *service) {
 
 	output := runFunc.Invoke(inputEntry)
 
-	mountPathEntry, ok := svc.cfgDir.Fetch("mount-path")
-	if !ok {
-		return
-	}
-	mountPath, ok := mountPathEntry.(base.String).Get()
+	mountPath, ok := helpers.GetChildString(svc.cfgDir, "mount-path")
 	if !ok {
 		mountPath = ""
 	}
@@ -144,18 +133,6 @@ func (e *initSvc) Fetch(name string) (entry base.Entry, ok bool) {
 func (e *initSvc) Put(name string, entry base.Entry) (ok bool) {
 	return false
 }
-
-/*
-func (s *initSvc) getBundle() base.Folder {
-	return inmem.NewFolderOf("ray-invocation",
-		c.commands,
-		c.output,
-		//c.result,
-		c.environ,
-		c.cwd,
-	).Freeze()
-}
-*/
 
 type service struct {
 	cfgDir  base.Folder
