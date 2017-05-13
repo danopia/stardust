@@ -11,7 +11,7 @@ import (
 )
 
 // Function that creates a new ray shell when invoked
-func initFunc (input base.Entry) (output base.Entry) {
+func initFunc(input base.Entry) (output base.Entry) {
 	log.Println("Loading init process...")
 
 	s := &initSvc{

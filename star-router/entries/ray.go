@@ -156,7 +156,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 		function := temp.Get().(base.Function)
 
 		var input base.Entry
-		if len(args) >= 2 {
+		if len(args) >= 2 && args[1] != "/dev/null" {
 			temp := c.handle.Clone()
 			if ok = temp.Walk(args[1]); !ok {
 				c.writeOut(cmd, fmt.Sprintf("Couldn't find input named %s", args[1]))
@@ -167,7 +167,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 		output := function.Invoke(input)
 
-		if len(args) >= 3 && output != nil {
+		if len(args) >= 3 && args[2] != "/dev/null" && output != nil {
 			parentDir := path.Dir(args[2])
 			temp := c.handle.Clone()
 			if ok = temp.Walk(parentDir); !ok {

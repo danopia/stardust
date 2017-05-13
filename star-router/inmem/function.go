@@ -7,8 +7,8 @@ import (
 // Manages an in-memory Function entry
 // No attempt is made to bring logic, so you must provide an implementation
 type Function struct {
-  name string
-  impl func(input base.Entry) (output base.Entry)
+	name string
+	impl func(input base.Entry) (output base.Entry)
 }
 
 var _ base.Function = (*Function)(nil)
