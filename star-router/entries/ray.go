@@ -1,10 +1,12 @@
 package entries
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/inmem"
@@ -109,6 +111,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 		cmdList := []string{"help", "cat", "cd", "echo", "ls", "invoke", ":"}
 		for _, cmd := range cmdList {
 			c.writeOut(cmd, fmt.Sprintf("  - %s", cmd))
+			time.Sleep(10 * time.Millisecond)
 		}
 		c.writeOut(cmd, "")
 		c.writeOut(cmd, "The shell will exit on any error.")
@@ -214,6 +217,60 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 		names := folder.Children()
 		text := strings.Join(names, "\t")
 		c.writeOut(cmd, text)
+
+	case "ll":
+		var folder base.Folder
+		if len(args) == 1 {
+			temp := c.handle.Clone()
+			if ok = temp.Walk(args[0]); !ok {
+				return
+			}
+
+			if folder, ok = temp.GetFolder(); !ok {
+				return
+			}
+		} else if len(args) == 0 {
+			if folder, ok = c.handle.GetFolder(); !ok {
+				return
+			}
+		} else {
+			return
+		}
+
+		// TODO: can't this fail?
+		names := folder.Children()
+		for _, name := range names {
+			entry, _ := folder.Fetch(name)
+			var extra string
+
+			switch entry := entry.(type) {
+			case base.String:
+				extra = "string"
+				if value, ok := entry.Get(); ok {
+					if txt, err := json.Marshal(value); err == nil {
+						extra = fmt.Sprintf("string %v", string(txt))
+					}
+				}
+
+			case base.Folder:
+				extra = fmt.Sprintf("folder (%d children)", len(entry.Children()))
+
+			case base.Log:
+				extra = "log"
+			case base.Queue:
+				extra = "queue"
+			case base.Function:
+				extra = "function"
+			case base.List:
+				extra = "list"
+			case base.File:
+				extra = "file"
+			}
+
+			c.writeOut(cmd, fmt.Sprintf("%s\t %s", name, extra))
+			time.Sleep(10 * time.Millisecond)
+		}
+		ok = true
 
 	default:
 		text := fmt.Sprintf("No such command: %v", cmd)
