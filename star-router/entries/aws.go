@@ -12,19 +12,13 @@ import (
 
 // Directory containing the clone function
 func getAwsDriver() *inmem.Folder {
-	return inmem.NewFolderOf("aws", &awsClone{}).Freeze()
+	return inmem.NewFolderOf("aws",
+		inmem.NewFunction("clone", startAws),
+	).Freeze()
 }
 
 // Function that creates a new AWS client when invoked
-type awsClone struct{}
-
-var _ base.Function = (*awsClone)(nil)
-
-func (e *awsClone) Name() string {
-	return "clone"
-}
-
-func (e *awsClone) Invoke(input base.Entry) (output base.Entry) {
+func startAws(input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
 	accessKey, _ := helpers.GetChildString(inputFolder, "access_key_id")
 	secretKey, _ := helpers.GetChildString(inputFolder, "secret_access_key")
@@ -94,7 +88,29 @@ func (e *awsSqs) Fetch(name string) (entry base.Entry, ok bool) {
 	switch name {
 
 	case "receive-message":
-		return &awsSqsReceiveMessage{e.sqs}, true
+		return inmem.NewFunction("receive-message", func(input base.Entry) (output base.Entry) {
+			inputFolder := input.(base.Folder)
+			queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
+
+			params := &sqs.ReceiveMessageInput{
+				QueueUrl: aws.String(queueUrl),
+			}
+
+			resp, err := e.sqs.ReceiveMessage(params)
+			if err == nil {
+				if len(resp.Messages) == 0 {
+					return nil
+				}
+
+				msg := resp.Messages[0]
+				return inmem.NewFolderOf("received-message",
+					inmem.NewString("msg-id", *msg.MessageId),
+					inmem.NewString("body", *msg.Body),
+					inmem.NewString("handle", *msg.ReceiptHandle),
+				).Freeze()
+			}
+			return nil
+		}), true
 
 	default:
 		return
@@ -103,39 +119,4 @@ func (e *awsSqs) Fetch(name string) (entry base.Entry, ok bool) {
 
 func (e *awsSqs) Put(name string, entry base.Entry) (ok bool) {
 	return false
-}
-
-// Function that creates a new AWS client when invoked
-type awsSqsReceiveMessage struct {
-	svc *sqs.SQS
-}
-
-var _ base.Function = (*awsSqsReceiveMessage)(nil)
-
-func (e *awsSqsReceiveMessage) Name() string {
-	return "receive-message"
-}
-
-func (e *awsSqsReceiveMessage) Invoke(input base.Entry) (output base.Entry) {
-	inputFolder := input.(base.Folder)
-	queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
-
-	params := &sqs.ReceiveMessageInput{
-		QueueUrl: aws.String(queueUrl),
-	}
-
-	resp, err := e.svc.ReceiveMessage(params)
-	if err == nil {
-		if len(resp.Messages) == 0 {
-			return nil
-		}
-
-		msg := resp.Messages[0]
-		return inmem.NewFolderOf("received-message",
-			inmem.NewString("msg-id", *msg.MessageId),
-			inmem.NewString("body", *msg.Body),
-			inmem.NewString("handle", *msg.ReceiptHandle),
-		).Freeze()
-	}
-	return nil
 }
