@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/danopia/stardust/star-router/base"
-	//"github.com/danopia/stardust/star-router/inmem"
+	"github.com/danopia/stardust/star-router/inmem"
 )
 
 // Function that creates a new ray shell when invoked
@@ -33,6 +33,12 @@ func (e *initFunc) Invoke(input base.Entry) (output base.Entry) {
 		}
 	}
 
+	temp := s.handle.Clone()
+	if ok := temp.Walk("/n"); ok {
+		outputParent := temp.Get().(base.Folder)
+		outputParent.Put("init", s)
+	}
+
 	for name, svc := range s.services {
 		if !svc.running {
 			log.Println("Starting service", name)
@@ -55,7 +61,7 @@ type initSvc struct {
 	handle   base.Handle
 }
 
-//var _ base.Folder = (*initSvc)(nil)
+var _ base.Folder = (*initSvc)(nil)
 
 func (s *initSvc) start(svc *service) {
 	svc.running = true
@@ -116,6 +122,29 @@ func (s *initSvc) start(svc *service) {
 	}
 }
 
+func (e *initSvc) Name() string {
+	return "init"
+}
+
+func (e *initSvc) Children() []string {
+	names := make([]string, len(e.services))
+	i := 0
+	for k := range e.services {
+		names[i] = k
+		i++
+	}
+	return names
+}
+
+func (e *initSvc) Fetch(name string) (entry base.Entry, ok bool) {
+	entry, ok = e.services[name]
+	return
+}
+
+func (e *initSvc) Put(name string, entry base.Entry) (ok bool) {
+	return false
+}
+
 /*
 func (s *initSvc) getBundle() base.Folder {
 	return inmem.NewFolderOf("ray-invocation",
@@ -133,8 +162,39 @@ type service struct {
 	running bool
 }
 
+var _ base.Folder = (*service)(nil)
+
 func newService(cfg base.Folder) *service {
 	return &service{
 		cfgDir: cfg,
 	}
+}
+
+func (e *service) Name() string {
+	return e.cfgDir.Name()
+}
+
+func (e *service) Children() []string {
+	names := e.cfgDir.Children()
+	names = append(names, "running")
+	return names
+}
+
+func (e *service) Fetch(name string) (entry base.Entry, ok bool) {
+	if name == "running" {
+		running := "no"
+		if e.running {
+			running = "yes"
+		}
+		return inmem.NewString("running", running), true
+	}
+
+	// fallback to config dir
+	entry, ok = e.cfgDir.Fetch(name)
+	return
+}
+
+func (e *service) Put(name string, entry base.Entry) (ok bool) {
+	// TODO: support writing to "running"
+	return false
 }
