@@ -1,0 +1,22 @@
+{
+  "date": "2017-05-12T23:32:14.169831696-07:00",
+  "connection_info": {
+    "host": "http://127.0.0.1:8500"
+  },
+  "values": {
+    "aws-creds/": "",
+    "aws-creds/access_key_id": "REDACTED",
+    "aws-creds/region": "us-west-2",
+    "aws-creds/secret_access_key": "REDACTED",
+    "aws-github-queue/queue-url": "https://sqs.us-west-2.amazonaws.com/REDACTED/sd-github-inbound",
+    "init-script": "echo \"Starting up...\"\ninvoke /rom/drv/aws/clone /boot/cfg/aws-creds /n/aws\ninvoke /rom/bin/ray-ssh /rom/bin/ray /n/ray-ssh\ninvoke /n/aws/sqs/receive-message /boot/cfg/aws-github-queue /tmp/message\n: cat /tmp/message/body\necho \"Done booting service\"",
+    "services/aws-client/input-path": "/boot/cfg/aws-creds",
+    "services/aws-client/mount-path": "/n/aws",
+    "services/aws-client/path": "/rom/drv/aws/clone",
+    "services/ray-ssh/input-path": "/rom/bin/ray",
+    "services/ray-ssh/mount-path": "/n/ray-ssh",
+    "services/ray-ssh/path": "/rom/bin/ray-ssh",
+    "system/name": "Protostar",
+    "system/owner": "dan@danopia.net"
+  }
+}
