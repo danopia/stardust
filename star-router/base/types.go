@@ -34,11 +34,11 @@ type List interface {
 	Children() []Entry
 }
 
-// A node which has a single atomic string value.
+// An immutable node which has a single read-only string value.
+// Make a new node to represent a changed value.
 type String interface {
 	Entry
-	Get() (value string, ok bool)
-	Set(value string) (ok bool)
+	Get() (value string)
 }
 
 // A node which has a known-size buffer of bytes

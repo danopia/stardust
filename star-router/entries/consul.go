@@ -121,9 +121,11 @@ func (e *consulKV) Fetch(name string) (entry base.Entry, ok bool) {
 func (e *consulKV) Put(name string, entry base.Entry) (ok bool) {
 	return false
 }
-func (e *consulKV) Get() (value string, ok bool) {
+
+// TODO: refactor this to use new immutable string design
+func (e *consulKV) Get() (value string) {
 	if e.path == "" {
-		return "", false
+		return ""
 	}
 
 	pair, _, err := e.kv.Get(e.path, nil)
@@ -132,11 +134,12 @@ func (e *consulKV) Get() (value string, ok bool) {
 	}
 
 	if pair == nil {
-		return "", false
+		return ""
 	}
-	return string(pair.Value), true // []byte
+	return string(pair.Value) // []byte
 }
 
+/*
 func (e *consulKV) Set(value string) (ok bool) {
 	p := &api.KVPair{
 		Key:   e.path,
@@ -149,3 +152,4 @@ func (e *consulKV) Set(value string) (ok bool) {
 	}
 	return true
 }
+*/

@@ -24,12 +24,8 @@ func (e *handlePathString) Name() string {
 	return "cwd"
 }
 
-func (e *handlePathString) Get() (value string, ok bool) {
-	return e.handle.Path(), true
-}
-
-func (e *handlePathString) Set(value string) (ok bool) {
-	return false
+func (e *handlePathString) Get() (value string) {
+	return e.handle.Path()
 }
 
 // Evaluation context for a ray
@@ -65,15 +61,15 @@ func (c *rayCtx) pumpCommands() {
 		if !ok {
 			return
 		}
-		line, ok := entry.(base.String).Get()
+		line, ok := entry.(base.String)
 		if !ok {
 			log.Println("Ray failed to get string from", entry)
 			return
 		}
 
-		log.Printf("+ %+v", line)
+		log.Printf("+ %+v", line.Get())
 
-		parts, err := shellwords.Parse(line)
+		parts, err := shellwords.Parse(line.Get())
 		if err != nil {
 			log.Println("Ray failed to parse:", err)
 			return
@@ -81,7 +77,7 @@ func (c *rayCtx) pumpCommands() {
 
 		ok = c.evalCommand(parts[0], parts[1:])
 		if !ok {
-			log.Println("Ray failed at", line)
+			log.Println("Ray failed at", line.Get())
 			return
 		}
 
@@ -132,10 +128,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 			switch entry := entry.(type) {
 			case base.String:
 				var value string
-				value, ok = entry.Get()
-				if !ok {
-					return
-				}
+				value = entry.Get()
 				c.writeOut(cmd, value)
 
 			default:
@@ -246,10 +239,8 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 			switch entry := entry.(type) {
 			case base.String:
 				extra = "string"
-				if value, ok := entry.Get(); ok {
-					if txt, err := json.Marshal(value); err == nil {
-						extra = fmt.Sprintf("string %v", string(txt))
-					}
+				if txt, err := json.Marshal(entry.Get()); err == nil {
+					extra = fmt.Sprintf("string %v", string(txt))
 				}
 
 			case base.Folder:
@@ -288,11 +279,7 @@ func rayFunc(input base.Entry) (output base.Entry) {
 	case base.String:
 
 		go func(ctx *rayCtx) {
-			script, ok := input.Get()
-			if !ok {
-				panic("Ray couldn't get script contents")
-			}
-
+			script := input.Get()
 			lines := strings.Split(script, "\n")
 			for _, raw := range lines {
 				line := strings.Trim(raw, " \t")
@@ -327,12 +314,12 @@ func (c *rayCtx) writeOutputToStdout() {
 		if !ok {
 			return
 		}
-		line, ok := entry.(base.String).Get()
+		line, ok := entry.(base.String)
 		if !ok {
 			log.Println("Ray failed to get string from output", entry)
 			return
 		}
 
-		log.Printf("> %+v", line)
+		log.Printf("> %+v", line.Get())
 	}
 }

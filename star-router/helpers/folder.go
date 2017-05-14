@@ -13,6 +13,12 @@ func GetChildString(folder base.Folder, name string) (value string, ok bool) {
 		log.Println("missed lookup for", name, "in", folder.Name())
 		return "", false
 	}
-	value, ok = entry.(base.String).Get()
-	return
+
+	str, ok := entry.(base.String)
+	if !ok {
+		log.Println("wanted string, got something else from", name)
+		return "", false
+	}
+
+	return str.Get(), true
 }

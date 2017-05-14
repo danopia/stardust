@@ -115,7 +115,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch entry := entry.(type) {
 
 	case base.String:
-		value, _ := entry.Get()
+		value := entry.Get()
 		w.Write([]byte(value))
 
 	case base.Folder:

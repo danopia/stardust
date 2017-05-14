@@ -159,13 +159,13 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 			if !ok {
 				return
 			}
-			line, ok := entry.(base.String).Get()
+			line, ok := entry.(base.String)
 			if !ok {
 				log.Println("Ray failed to get string from output", entry)
 				return
 			}
 
-			term.Write([]byte(line + "\n"))
+			term.Write([]byte(line.Get() + "\n"))
 		}
 	}()
 
@@ -206,11 +206,7 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 
 	for {
 		term.Write([]byte("\n"))
-
-		curCwd, ok := cwd.Get()
-		if ok {
-			term.SetPrompt(fmt.Sprintf("%s $ ", curCwd))
-		}
+		term.SetPrompt(fmt.Sprintf("%s $ ", cwd.Get()))
 
 		line, err := term.ReadLine()
 		if err == io.EOF {
