@@ -6,7 +6,9 @@ import (
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/helpers"
 	"github.com/danopia/stardust/star-router/inmem"
+
 	"github.com/heatxsink/go-hue/configuration"
+	"github.com/heatxsink/go-hue/lights"
 	"github.com/heatxsink/go-hue/portal"
 )
 
@@ -81,47 +83,48 @@ func pairHue(bridge, input base.Entry) (output base.Entry) {
 
 // Function that creates a new Hue client when invoked
 func startHue(input base.Entry) (output base.Entry) {
-	/*client, err := api.NewClient(api.DefaultConfig())
+	inputFolder := input.(base.Folder)
+	ipAddress, _ := helpers.GetChildString(inputFolder, "lan-ip-address")
+	secret, _ := helpers.GetChildString(inputFolder, "username")
+
+	return inmem.NewFolderOf(input.Name(),
+		&hueLightDir{lights.New(ipAddress, secret)},
+	).Freeze()
+}
+
+// Name representing the set of lights from a Hue bridge
+type hueLightDir struct {
+	*lights.Lights
+}
+
+var _ base.Folder = (*hueLightDir)(nil)
+
+func (e *hueLightDir) Name() string {
+	return "lights"
+}
+
+func (e *hueLightDir) Children() []string {
+	lights, err := e.GetAllLights()
 	if err != nil {
-		panic(err)
+		log.Println("lights.GetAllLights() ERROR:", err)
+		return nil
 	}
 
-	return &consulRoot{client}*/
-	return nil
-}
-
-/*
-// Main Entity representing a consul client
-// Presents k/v tree as a child
-type consulRoot struct {
-	client *api.Client
-}
-
-var _ base.Folder = (*consulRoot)(nil)
-
-func (e *consulRoot) Name() string {
-	return "consul"
-}
-func (e *consulRoot) Children() []string {
-	return []string{"kv"}
-}
-func (e *consulRoot) Fetch(name string) (entry base.Entry, ok bool) {
-	switch name {
-
-	case "kv":
-		return &consulKV{
-			root: e,
-			kv:   e.client.KV(),
-		}, true
-
-	default:
-		return
+	names := make([]string, len(lights))
+	for idx, light := range lights {
+		names[idx] = light.Name
 	}
+	return names
 }
-func (e *consulRoot) Put(name string, entry base.Entry) (ok bool) {
+
+func (e *hueLightDir) Fetch(name string) (entry base.Entry, ok bool) {
+	return
+}
+func (e *hueLightDir) Put(name string, entry base.Entry) (ok bool) {
 	return false
 }
 
+/*
 // Directory/String tree backed by consul kv
 type consulKV struct {
 	root *consulRoot
