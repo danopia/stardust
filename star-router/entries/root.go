@@ -25,6 +25,7 @@ func newRomEntry() *inmem.Folder {
 	bin := inmem.NewFolderOf("bin",
 		inmem.NewFunction("ray", rayFunc),
 		inmem.NewFunction("ray-ssh", raySshFunc),
+		inmem.NewFunction("httpd", httpdFunc),
 		inmem.NewFunction("init", initFunc),
 	).Freeze()
 

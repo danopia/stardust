@@ -38,6 +38,13 @@ func newRootHandle(ns *Namespace) Handle {
 	}
 }
 
+func NewDetachedHandle(root Entry) Handle {
+	return &handle{
+		stack: []Entry{root},
+		names: []string{root.Name()},
+	}
+}
+
 func (h *handle) Clone() Handle {
 	newH := &handle{
 		stack: make([]Entry, len(h.stack)),
