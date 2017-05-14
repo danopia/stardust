@@ -3,9 +3,9 @@ package entries
 import (
 	"bytes"
 	"fmt"
-	"strings"
-	"net/http"
 	"log"
+	"net/http"
+	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
 	//"github.com/danopia/stardust/star-router/inmem"
@@ -87,7 +87,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if idx > 1 {
 				buffer.WriteString(" / ")
 			}
-			
+
 			buffer.WriteString("<a href=\"")
 			buffer.WriteString(path)
 			buffer.WriteString("/\">")
@@ -126,18 +126,17 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Name cannot be rendered", http.StatusNotImplemented)
 	}
 
-
 	/*
 
-	w.Header().Add("access-control-allow-origin", "*")
-	w.Header().Add("cache-control", "no-store, no-cache, must-revalidate, max-age=0")
-	w.Header().Add("content-type", "application/json; charset=UTF-8")
-	w.Header().Add("vary", "origin")
+		w.Header().Add("access-control-allow-origin", "*")
+		w.Header().Add("cache-control", "no-store, no-cache, must-revalidate, max-age=0")
+		w.Header().Add("content-type", "application/json; charset=UTF-8")
+		w.Header().Add("vary", "origin")
 
-	payload, err := json.Marshal(info)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-*/
+		payload, err := json.Marshal(info)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	*/
 }
