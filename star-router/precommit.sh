@@ -34,4 +34,4 @@ else
 fi
 
 echo "==> Reformatting go source"
-go fmt ./
+go fmt ./...

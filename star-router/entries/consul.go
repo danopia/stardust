@@ -2,6 +2,7 @@ package entries
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
@@ -58,6 +59,8 @@ func (e *consulRoot) Put(name string, entry base.Entry) (ok bool) {
 }
 
 // Directory/String tree backed by consul kv
+// This struct only represents a folder
+// inmem strings are used to handle keys
 type consulKV struct {
 	root *consulRoot
 	kv   *api.KV
@@ -65,7 +68,6 @@ type consulKV struct {
 }
 
 var _ base.Folder = (*consulKV)(nil)
-var _ base.String = (*consulKV)(nil)
 
 func (e *consulKV) Name() string {
 	if e.path == "" {
@@ -78,8 +80,9 @@ func (e *consulKV) Name() string {
 		}
 	}
 }
+
 func (e *consulKV) Children() []string {
-	// Calculate consule key prefix
+	// Calculate consul key prefix
 	prefix := ""
 	if len(e.path) > 0 {
 		prefix = fmt.Sprintf("%s/", e.path)
@@ -102,54 +105,99 @@ func (e *consulKV) Children() []string {
 	return children
 }
 
-// this always works
+// try as key first, then as folder, then for children presence, then fail
 func (e *consulKV) Fetch(name string) (entry base.Entry, ok bool) {
 	prefix := e.path
 	if len(prefix) > 0 {
 		prefix += "/"
 	}
 
-	return &consulKV{
+	// Try to get as normal string key
+	pair, _, err := e.kv.Get(prefix+name, nil)
+	if err != nil {
+		return nil, false
+	}
+	if pair != nil {
+		return inmem.NewString(name, string(pair.Value)), true
+	}
+
+	// Make a folder and see if it exists
+	subDir := &consulKV{
 		root: e.root,
 		kv:   e.kv,
 		path: prefix + name,
-	}, true
+	}
+
+	// Try to get as special folder key
+	pair, _, err = e.kv.Get(prefix+name+"/", nil)
+	if err != nil {
+		return nil, false
+	}
+	if pair != nil {
+		return subDir, true
+	}
+
+	// Check if it has any children
+	if len(subDir.Children()) > 0 {
+		return subDir, true
+	}
+	return nil, false
 }
 
 // this never works because you can't bind foreign nodes into the consul tree
 // you have to get a node then set its value
 func (e *consulKV) Put(name string, entry base.Entry) (ok bool) {
-	return false
+	prefix := e.path
+	if len(prefix) > 0 {
+		prefix += "/"
+	}
+
+	switch entry := entry.(type) {
+
+	case base.String:
+		// TODO: make sure not already a folder?
+		_, err := e.kv.Put(&api.KVPair{
+			Key:   prefix + name,
+			Value: []byte(entry.Get()),
+		}, nil)
+		if err != nil {
+			panic(err)
+		}
+		ok = true
+
+	case base.Folder:
+		// explicitly create the folder entry
+		_, err := e.kv.Put(&api.KVPair{
+			Key: prefix + name + "/",
+		}, nil)
+		if err != nil {
+			panic(err)
+		}
+
+		// if the folder has contents, let's recursively store
+		// TODO: clear existing children first??
+		names := entry.Children()
+		if len(names) > 0 {
+			newEntry, dirOk := e.Fetch(name)
+			newDir := newEntry.(base.Folder)
+			if dirOk {
+				ok = true
+				for _, subName := range names {
+					value, getOk := entry.Fetch(subName)
+					if getOk {
+						newDir.Put(subName, value)
+					} else {
+						ok = false
+					}
+				}
+			}
+		} else {
+			ok = true
+		}
+
+	default:
+		log.Println("consul: tried to store weird thing", entry, "as", name)
+
+	}
+	return
 }
-
-// TODO: refactor this to use new immutable string design
-func (e *consulKV) Get() (value string) {
-	if e.path == "" {
-		return ""
-	}
-
-	pair, _, err := e.kv.Get(e.path, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	if pair == nil {
-		return ""
-	}
-	return string(pair.Value) // []byte
-}
-
-/*
-func (e *consulKV) Set(value string) (ok bool) {
-	p := &api.KVPair{
-		Key:   e.path,
-		Value: []byte(value),
-	}
-
-	_, err := e.kv.Put(p, nil)
-	if err != nil {
-		panic(err)
-	}
-	return true
-}
-*/

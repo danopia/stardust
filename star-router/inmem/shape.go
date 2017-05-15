@@ -9,11 +9,11 @@ import (
 
 // Compiles a Shape out of a Folder
 type Shape struct {
-	cfg base.Folder
+	cfg          base.Folder
 	validateFunc base.Function
-	typeName string
-	props []*Shape
-	optional bool
+	typeName     string
+	props        []*Shape
+	optional     bool
 }
 
 var _ base.Shape = (*Shape)(nil)
@@ -77,9 +77,9 @@ func (e *Shape) Check(entry base.Entry) (ok bool) {
 		if folder, castOk := entry.(base.Folder); castOk {
 			ok = true
 			for _, prop := range e.props {
-				actual, getOk := folder.Fetch(prop.Name())
-				if getOk {
-					ok = prop.Check(actual)
+				actual, _ := folder.Fetch(prop.Name())
+				if !prop.Check(actual) {
+					ok = false
 				}
 			}
 		}

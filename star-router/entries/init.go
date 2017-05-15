@@ -79,7 +79,6 @@ func (s *initSvc) start(svc *service) {
 		runFunc = input
 
 	case base.Folder:
-		log.Println("init:", svc.cfgDir.Name(), "is a proper Shape. Yey!")
 		if runEntry, ok := input.Fetch("invoke"); ok {
 			runFunc = runEntry.(base.Function)
 		} else {
