@@ -14,7 +14,7 @@ import (
 func getAwsDriver() *inmem.Folder {
 	return inmem.NewFolderOf("aws",
 		inmem.NewFunction("invoke", startAws),
-		inmem.NewString("input-shape-path", "/rom/shapes/aws-config"),
+		inmem.NewLink("input-shape", "/rom/shapes/aws-config"),
 	).Freeze()
 }
 

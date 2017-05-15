@@ -85,14 +85,11 @@ func (s *initSvc) start(svc *service) {
 			return
 		}
 
-		inputShapePath, ok = helpers.GetChildString(input, "input-shape-path")
-		if ok {
-			temp2 := temp.Clone()
-			temp2.Walk(inputShapePath)
-			inputShape, ok = temp2.GetShape()
-			if !ok {
-				return
-			}
+		temp2 := temp.Clone()
+		temp2.Walk("input-shape")
+		inputShape, ok = temp2.GetShape()
+		if !ok {
+			log.Println("No input shape found for", runPath)
 		}
 
 	default:

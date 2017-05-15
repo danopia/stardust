@@ -80,7 +80,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		buffer.WriteString("<h3>")
 		webPath := "/~~"
-		path := strings.TrimPrefix(handle.Path(), "/")
+		path := handle.Path()
 		for idx, name := range strings.Split(path, "/") {
 			if idx > 0 {
 				webPath = fmt.Sprintf("%s/%s", webPath, name)

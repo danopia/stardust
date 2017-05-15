@@ -49,6 +49,14 @@ type String interface {
 	Get() (value string)
 }
 
+// An immutable alias node which names a relative path target.
+// Compare to unix symlinks
+type Link interface {
+	Entry
+	Target() (value string)
+	// Fetch() (target Entry, ok bool)
+}
+
 // A node which has a known-size buffer of bytes
 type File interface {
 	Entry

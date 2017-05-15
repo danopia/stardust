@@ -12,11 +12,13 @@ type Handle interface {
 	Get() Entry
 	Path() string
 
+	// All of these except GetLink() follow Links
 	GetFolder() (entry Folder, ok bool)
 	GetFunction() (entry Function, ok bool)
 	GetShape() (entry Shape, ok bool)
 	GetList() (entry List, ok bool)
 	GetString() (entry String, ok bool)
+	GetLink() (entry Link, ok bool)
 	GetFile() (entry File, ok bool)
 	GetQueue() (entry Queue, ok bool)
 	GetLog() (entry Log, ok bool)
@@ -42,7 +44,7 @@ func newRootHandle(ns *Namespace) Handle {
 func NewDetachedHandle(root Entry) Handle {
 	return &handle{
 		stack: []Entry{root},
-		names: []string{root.Name()},
+		names: []string{""},
 	}
 }
 
@@ -63,7 +65,22 @@ func (h *handle) Stack() (stack []Entry) {
 }
 
 func (h *handle) Get() Entry {
-	return h.stack[len(h.stack)-1]
+	entry := h.stack[len(h.stack)-1]
+	for {
+		link, ok := entry.(Link)
+		if !ok {
+			break
+		}
+
+		ok = h.Walk(link.Target())
+		if !ok {
+			log.Println("FAILED to walk Link", entry.Name, "to", link.Target())
+			return nil
+		}
+
+		entry = h.Get()
+	}
+	return entry
 }
 
 // Cast helpers
@@ -85,6 +102,13 @@ func (h *handle) GetList() (entry List, ok bool) {
 }
 func (h *handle) GetString() (entry String, ok bool) {
 	entry, ok = h.Get().(String)
+	return
+}
+
+// Specialcased: Doesn't follow Links (duh)
+func (h *handle) GetLink() (entry Link, ok bool) {
+	rawE := h.stack[len(h.stack)-1]
+	entry, ok = rawE.(Link)
 	return
 }
 func (h *handle) GetFile() (entry File, ok bool) {
