@@ -21,6 +21,14 @@ type Folder interface {
 	Put(name string, entry Entry) (ok bool)
 }
 
+// A special folder describing requirements that other nodes can be matched against
+// Useful for defining structs for Functions to pass around (e.g. type system)
+// Its own shape: type String, children []Shape, validate Function
+type Shape interface {
+	Folder
+	Check(entry Entry) (ok bool)
+}
+
 // A node that can be invoked to map an Entry
 type Function interface {
 	Entry

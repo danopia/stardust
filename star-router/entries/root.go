@@ -32,6 +32,7 @@ func newRomEntry() *inmem.Folder {
 	return inmem.NewFolderOf("rom",
 		drivers,
 		bin,
+		newShapesEntry(),
 	).Freeze()
 }
 

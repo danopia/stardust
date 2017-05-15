@@ -12,7 +12,7 @@ import (
 
 // Function that creates a new ray shell when invoked
 func initFunc(input base.Entry) (output base.Entry) {
-	log.Println("Loading init process...")
+	log.Println("init: Bootstrapping...")
 
 	s := &initSvc{
 		cfgDir:   input.(base.Folder), // TODO
@@ -34,11 +34,14 @@ func initFunc(input base.Entry) (output base.Entry) {
 
 	for name, svc := range s.services {
 		if !svc.running {
-			log.Println("Starting service", name)
+			log.Println("init: Starting service", name)
 			s.start(svc)
+			if !svc.running {
+				log.Println("init: Failed to start", name)
+			}
 		}
 	}
-	log.Println("All services started")
+	log.Println("init: All services started")
 
 	for {
 		time.Sleep(1000 * time.Millisecond)
@@ -57,18 +60,45 @@ type initSvc struct {
 var _ base.Folder = (*initSvc)(nil)
 
 func (s *initSvc) start(svc *service) {
-	svc.running = true
-
 	runPath, ok := helpers.GetChildString(svc.cfgDir, "path")
 	if !ok {
 		return
 	}
 
+	// things about the invocation function
+	var runFunc base.Function
+	var inputShape base.Shape
+	var inputShapePath string
+
 	temp := s.handle.Clone()
 	temp.Walk(runPath)
-	runFunc, ok := temp.GetFunction()
-	if !ok {
-		return
+	switch input := temp.Get().(type) {
+
+	case base.Function:
+		log.Println("init:", svc.cfgDir.Name(), "is a legacy Function, please update")
+		runFunc = input
+
+	case base.Folder:
+		log.Println("init:", svc.cfgDir.Name(), "is a proper Shape. Yey!")
+		if runEntry, ok := input.Fetch("invoke"); ok {
+			runFunc = runEntry.(base.Function)
+		} else {
+			return
+		}
+
+		inputShapePath, ok = helpers.GetChildString(input, "input-shape-path")
+		if ok {
+			temp2 := temp.Clone()
+			temp2.Walk(inputShapePath)
+			inputShape, ok = temp2.GetShape()
+			if !ok {
+				return
+			}
+		}
+
+	default:
+		log.Println("init:", runPath, "is not executable")
+
 	}
 
 	inputPath, ok := helpers.GetChildString(svc.cfgDir, "input-path")
@@ -81,6 +111,12 @@ func (s *initSvc) start(svc *service) {
 	inputEntry := temp.Get()
 	if !ok {
 		return
+	}
+
+	if inputShape != nil {
+		if ok := inputShape.Check(inputEntry); !ok {
+			log.Println("Entry", inputPath, "doesn't match shape", inputShapePath, "for", runPath)
+		}
 	}
 
 	output := runFunc.Invoke(inputEntry)
@@ -101,6 +137,8 @@ func (s *initSvc) start(svc *service) {
 		outputParent.Put(path.Base(mountPath), output)
 		//c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
 	}
+
+	svc.running = true
 }
 
 func (e *initSvc) Name() string {

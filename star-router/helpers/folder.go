@@ -10,7 +10,9 @@ import (
 func GetChildString(folder base.Folder, name string) (value string, ok bool) {
 	entry, ok := folder.Fetch(name)
 	if !ok {
-		log.Println("missed lookup for", name, "in", folder.Name())
+		if name != "optional" {
+			log.Println("missed lookup for", name, "in", folder.Name())
+		}
 		return "", false
 	}
 

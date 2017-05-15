@@ -14,6 +14,7 @@ type Handle interface {
 
 	GetFolder() (entry Folder, ok bool)
 	GetFunction() (entry Function, ok bool)
+	GetShape() (entry Shape, ok bool)
 	GetList() (entry List, ok bool)
 	GetString() (entry String, ok bool)
 	GetFile() (entry File, ok bool)
@@ -72,6 +73,10 @@ func (h *handle) GetFolder() (entry Folder, ok bool) {
 }
 func (h *handle) GetFunction() (entry Function, ok bool) {
 	entry, ok = h.Get().(Function)
+	return
+}
+func (h *handle) GetShape() (entry Shape, ok bool) {
+	entry, ok = h.Get().(Shape)
 	return
 }
 func (h *handle) GetList() (entry List, ok bool) {

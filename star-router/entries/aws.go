@@ -13,7 +13,8 @@ import (
 // Directory containing the clone function
 func getAwsDriver() *inmem.Folder {
 	return inmem.NewFolderOf("aws",
-		inmem.NewFunction("clone", startAws),
+		inmem.NewFunction("invoke", startAws),
+		inmem.NewString("input-shape-path", "/rom/shapes/aws-config"),
 	).Freeze()
 }
 
