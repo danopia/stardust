@@ -8,8 +8,15 @@ import (
 	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
-	//"github.com/danopia/stardust/star-router/inmem"
+	"github.com/danopia/stardust/star-router/inmem"
 )
+
+// Directory containing the clone function
+func getHttpdDriver() base.Folder {
+	return inmem.NewFolderOf("httpd",
+		inmem.NewFunction("invoke", httpdFunc),
+	).Freeze()
+}
 
 // Function that creates a new HTTP server when invoked
 func httpdFunc(input base.Entry) (output base.Entry) {

@@ -6,9 +6,27 @@ import (
 
 func newShapesEntry() *inmem.Folder {
 	return inmem.NewFolderOf("shapes",
+		functionShape,
 		awsConfigShape,
+		hueBridgeConfigShape,
 	).Freeze()
 }
+
+var functionShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("function",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("invoke", "Function"),
+			inmem.NewFolderOf("input-shape",
+				inmem.NewString("type", "Shape"),
+				inmem.NewString("optional", "yes"),
+			),
+			inmem.NewFolderOf("output-shape",
+				inmem.NewString("type", "Shape"),
+				inmem.NewString("optional", "yes"),
+			),
+		),
+	))
 
 var awsConfigShape *inmem.Shape = inmem.NewShape(
 	inmem.NewFolderOf("aws-config",
@@ -21,5 +39,24 @@ var awsConfigShape *inmem.Shape = inmem.NewShape(
 				inmem.NewString("optional", "yes"),
 			),
 			inmem.NewString("region", "String"),
+		),
+	))
+
+var hueBridgeConfigShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("hue-bridge-config",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewFolderOf("bridge-id",
+				inmem.NewString("type", "String"),
+				inmem.NewString("optional", "yes"),
+			),
+			inmem.NewFolderOf("lan-ip-address",
+				inmem.NewString("type", "String"),
+				inmem.NewString("optional", "no"),
+			),
+			inmem.NewFolderOf("username",
+				inmem.NewString("type", "String"),
+				inmem.NewString("optional", "no"),
+			),
 		),
 	))

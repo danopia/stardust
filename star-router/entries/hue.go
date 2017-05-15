@@ -16,7 +16,10 @@ import (
 func getHueDriver() *inmem.Folder {
 	return inmem.NewFolderOf("hue",
 		inmem.NewFunction("discover", discoverHue),
-		inmem.NewFunction("clone", startHue),
+		inmem.NewFolderOf("init-bridge",
+			inmem.NewFunction("invoke", startHue),
+			inmem.NewLink("input-shape", "/rom/shapes/hue-bridge-config"),
+		).Freeze(),
 	).Freeze()
 }
 

@@ -10,6 +10,13 @@ import (
 	"github.com/danopia/stardust/star-router/inmem"
 )
 
+// Directory containing the clone function
+func getInitDriver() base.Folder {
+	return inmem.NewFolderOf("init",
+		inmem.NewFunction("invoke", initFunc),
+	).Freeze()
+}
+
 // Function that creates a new ray shell when invoked
 func initFunc(input base.Entry) (output base.Entry) {
 	log.Println("init: Bootstrapping...")

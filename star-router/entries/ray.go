@@ -13,6 +13,14 @@ import (
 	"github.com/mattn/go-shellwords"
 )
 
+// Directory containing the clone function
+func getRayDriver() base.Folder {
+	return inmem.NewFolderOf("ray",
+		inmem.NewFunction("invoke", rayFunc),
+		inmem.NewLink("input-shape", "/rom/shapes/ray-opts"),
+	).Freeze()
+}
+
 // Read-only string impl that returns the given handle's location
 type handlePathString struct {
 	handle base.Handle

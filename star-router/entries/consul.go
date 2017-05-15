@@ -13,7 +13,7 @@ import (
 // Directory containing the clone function
 func getConsulDriver() *inmem.Folder {
 	return inmem.NewFolderOf("consul",
-		inmem.NewFunction("clone", startConsul),
+		inmem.NewFunction("invoke", startConsul),
 	).Freeze()
 }
 

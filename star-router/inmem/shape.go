@@ -78,16 +78,38 @@ func (e *Shape) Check(entry base.Entry) (ok bool) {
 			ok = true
 			for _, prop := range e.props {
 				actual, _ := folder.Fetch(prop.Name())
+				// TODO: not recursive, not DRY, doesn't handle context
+				if link, ok := actual.(base.Link); ok {
+					temp := base.RootSpace.NewHandle()
+					if !temp.Walk(link.Target()) {
+						log.Println("Following link for", prop, "failed")
+						ok = false
+						continue
+					}
+					actual = temp.Get()
+				}
 				if !prop.Check(actual) {
 					ok = false
 				}
 			}
 		}
 
+	case "Function":
+		// Functions by themselves don't have any properties
+		// They're shipped with type info
+		// TODO: rename to Logic, we have two meanings for "function" now.
+		_, ok = entry.(base.Function)
+
+	case "Shape":
+		_, ok = entry.(base.Shape)
+
+	default:
+		log.Printf("Can't validate unknown type for %+v", e)
+
 	}
 
 	if !ok {
-		log.Println("Validating failed:", entry, "against", e)
+		log.Printf("Validating failed: %+v against %+v", entry, e)
 	}
 
 	return

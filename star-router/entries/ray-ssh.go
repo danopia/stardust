@@ -15,10 +15,18 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+// Directory containing the clone function
+func getRaySshDriver() base.Folder {
+	return inmem.NewFolderOf("ray-ssh",
+		inmem.NewFunction("invoke", raySshFunc),
+		inmem.NewLink("input-shape", "/rom/shapes/function"),
+	).Freeze()
+}
+
 // Function that creates a new ray shell when invoked
 func raySshFunc(input base.Entry) (output base.Entry) {
 	service := &raySsh{
-		rayFunc:   input.(base.Function), // TODO
+		rayFunc:   input.(base.Folder), // function shape
 		tmpFolder: inmem.NewFolder("ray-ssh"),
 	}
 
@@ -31,7 +39,7 @@ func raySshFunc(input base.Entry) (output base.Entry) {
 type raySsh struct {
 	sshConfig *ssh.ServerConfig
 	listener  net.Listener
-	rayFunc   base.Function
+	rayFunc   base.Folder
 	tmpFolder base.Folder
 }
 
@@ -125,7 +133,16 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 		return
 	}
 
-	ray := e.rayFunc.Invoke(nil).(base.Folder)
+	rayFuncIvk, ok := e.rayFunc.Fetch("invoke")
+	if !ok {
+		panic("wat-a")
+	}
+	rayFunc, ok := rayFuncIvk.(base.Function)
+	if !ok {
+		panic("wat-b")
+	}
+
+	ray := rayFunc.Invoke(nil).(base.Folder)
 	cmdEntry, ok := ray.Fetch("commands")
 	if !ok {
 		panic("wat0")

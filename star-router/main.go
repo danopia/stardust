@@ -25,14 +25,14 @@ func main() {
 	handle := ns.NewHandle()
 
 	// Get the Init executable from /rom/bin
-	handle.Walk("/rom/bin/init")
+	handle.Walk("/rom/bin/init/invoke") // TODO
 	init, ok := handle.GetFunction()
 	if !ok {
 		panic("Init executable not found. That shouldn't happen.")
 	}
 
 	// Get the Consul driver in /rom/drv
-	handle.Walk("/rom/drv/consul/clone")
+	handle.Walk("/rom/drv/consul/invoke")
 	consulClone, ok := handle.GetFunction()
 	if !ok {
 		panic("Consul Driver not found. That shouldn't happen.")
