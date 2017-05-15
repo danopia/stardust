@@ -78,20 +78,23 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		buffer.WriteString(entry.Name())
 		buffer.WriteString("</title>")
 
-		path = "/~~"
 		buffer.WriteString("<h3>")
-		for idx, entry := range handle.Stack() {
+		webPath := "/~~"
+		path := strings.TrimPrefix(handle.Path(), "/")
+		for idx, name := range strings.Split(path, "/") {
 			if idx > 0 {
-				path = fmt.Sprintf("%s/%s", path, entry.Name())
-			}
-			if idx > 1 {
+				webPath = fmt.Sprintf("%s/%s", webPath, name)
 				buffer.WriteString(" / ")
 			}
 
 			buffer.WriteString("<a href=\"")
-			buffer.WriteString(path)
+			buffer.WriteString(webPath)
 			buffer.WriteString("/\">")
-			buffer.WriteString(entry.Name())
+			if len(name) > 0 {
+				buffer.WriteString(name)
+			} else {
+				buffer.WriteString("(root)")
+			}
 			buffer.WriteString("</a> ")
 		}
 		buffer.WriteString("</h3>")
