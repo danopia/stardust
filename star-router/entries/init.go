@@ -68,7 +68,6 @@ func (s *initSvc) start(svc *service) {
 	// things about the invocation function
 	var runFunc base.Function
 	var inputShape base.Shape
-	var inputShapePath string
 
 	temp := s.handle.Clone()
 	temp.Walk(runPath)
@@ -111,7 +110,7 @@ func (s *initSvc) start(svc *service) {
 
 	if inputShape != nil {
 		if ok := inputShape.Check(inputEntry); !ok {
-			log.Println("Entry", inputPath, "doesn't match shape", inputShapePath, "for", runPath)
+			log.Println("Entry", inputPath, "doesn't match shape", inputShape, "for", runPath)
 		}
 	}
 
