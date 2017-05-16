@@ -60,9 +60,9 @@ type Link interface {
 // A node which has a known-size buffer of bytes
 type File interface {
 	Entry
-	GetSize() uint
-	Read(offset uint, numBytes uint) (data []byte)
-	Write(offset uint, data []byte) (numBytes uint)
+	GetSize() int64
+	Read(offset int64, numBytes int) (data []byte)
+	Write(offset int64, data []byte) (numBytes int)
 	Truncate() (ok bool)
 }
 

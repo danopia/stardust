@@ -17,6 +17,7 @@ func NewRootEntry() *inmem.Folder {
 // Presents a read-only name with compiled-in children
 func newRomEntry() *inmem.Folder {
 	drivers := inmem.NewFolderOf("drv",
+		getOsDriver(),
 		getAwsDriver(),
 		getConsulDriver(),
 		getHueDriver(),

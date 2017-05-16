@@ -103,16 +103,15 @@ func (s *initSvc) start(svc *service) {
 
 	}
 
+	var inputEntry base.Entry
 	inputPath, ok := helpers.GetChildString(svc.cfgDir, "input-path")
-	if !ok {
-		return
-	}
-
-	temp = s.handle.Clone()
-	temp.Walk(inputPath)
-	inputEntry := temp.Get()
-	if !ok {
-		return
+	if ok {
+		temp = s.handle.Clone()
+		temp.Walk(inputPath)
+		inputEntry = temp.Get()
+		if !ok {
+			return
+		}
 	}
 
 	if inputShape != nil {

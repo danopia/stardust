@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
@@ -57,7 +58,8 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	handle := base.NewDetachedHandle(e.root)
 
-	path := strings.TrimPrefix(r.RequestURI, "/~~")
+	// TODO: escape pieces?
+	path, _ := url.PathUnescape(strings.TrimPrefix(r.RequestURI, "/~~"))
 	isDir := true
 	if len(path) > 1 {
 		isDir = strings.HasSuffix(path, "/")
@@ -131,6 +133,20 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case base.Folder:
 		// not in dir mode, redirect
 		http.Redirect(w, r, fmt.Sprintf("%s/", r.RequestURI), http.StatusFound)
+
+	case base.File:
+		var offset int64
+		chunkSize := 4 * 1024
+		for {
+			log.Println("reading at offset", offset)
+			if data := entry.Read(offset, chunkSize); len(data) > 0 {
+				log.Println("got", len(data), "bytes")
+				w.Write(data)
+				offset += int64(len(data))
+			} else {
+				return
+			}
+		}
 
 	default:
 		http.Error(w, "Name cannot be rendered", http.StatusNotImplemented)
