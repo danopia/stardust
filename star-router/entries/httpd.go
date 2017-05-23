@@ -41,7 +41,7 @@ type httpd struct {
 }
 
 func (e *httpd) listen() {
-	host := fmt.Sprint("localhost:", 9234)
+	host := fmt.Sprint("0.0.0.0:", 9234)
 	log.Printf("Listening on %s...", host)
 	if err := http.ListenAndServe(host, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
