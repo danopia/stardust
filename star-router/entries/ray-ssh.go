@@ -32,7 +32,6 @@ func raySshFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 	}
 
 	service.configure()
-	service.start()
 	return service.tmpFolder
 }
 
@@ -54,15 +53,18 @@ func (e *raySsh) configure() {
 	// You can generate a keypair with 'ssh-keygen -t rsa'
 	privateBytes, err := ioutil.ReadFile("id_rsa")
 	if err != nil {
-		log.Fatal("Failed to load private key (./id_rsa)")
+		log.Println("Failed to load private key (./id_rsa)")
+		return
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Fatal("Failed to parse private key")
+		log.Println("Failed to parse private key")
+		return
 	}
 
 	e.sshConfig.AddHostKey(private)
+	e.start()
 }
 
 func (e *raySsh) checkPassword(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
