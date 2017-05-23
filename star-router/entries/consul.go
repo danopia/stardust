@@ -3,6 +3,7 @@ package entries
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
@@ -19,7 +20,36 @@ func getConsulDriver() *inmem.Folder {
 
 // Function that creates a new Consul client when invoked
 func startConsul(ctx base.Context, input base.Entry) (output base.Entry) {
-	client, err := api.NewClient(api.DefaultConfig())
+	var config *api.Config
+
+	if input != nil {
+		inputStr := input.(base.String)
+		uri, err := url.Parse(inputStr.Get())
+		if err != nil {
+			log.Println("URI parse error:", err)
+			panic("Couldn't parse Consul endpoint")
+		}
+
+		port := uri.Port()
+		if port == "" {
+			if uri.Scheme == "https" {
+				port = "443"
+			} else {
+				port = "8500"
+			}
+		}
+
+		config = &api.Config{
+			Address: fmt.Sprintf("%s:%s", uri.Hostname(), port),
+			Scheme:  uri.Scheme,
+		}
+
+	} else {
+		config = api.DefaultConfig()
+	}
+
+	log.Println("Connecting to", config)
+	client, err := api.NewClient(config)
 	if err != nil {
 		panic(err)
 	}

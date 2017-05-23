@@ -1,21 +1,21 @@
 package main
 
 import (
-	//"flag"
+	"flag"
 	//"fmt"
 	"log"
-	//"net/http"
 
 	//"github.com/danopia/stardust/wormhole/ddp"
 	//"github.com/danopia/stardust/wormhole/kernel"
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/entries"
+	"github.com/danopia/stardust/star-router/inmem"
 )
 
 func main() {
 	//var port = flag.Int("port", 9234, "TCP port that the wormhole should be available on")
-	//var secret = flag.String("secret", "none", "Secret token, for id and auth")
-	//flag.Parse()
+	var consulUri = flag.String("consul-uri", "http://127.0.0.1:8500", "Base URI for Consul (serves as nvram)")
+	flag.Parse()
 
 	//http.HandleFunc("/sockjs/info", ddp.ServeSockJsInfo)
 	//http.HandleFunc("/sockjs", ddp.ServeSockJs)
@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// Mount the Consul driver at /n/consul
-	ctx.Put("/n/consul", consulClone.Invoke(ctx, nil))
+	ctx.Put("/n/consul", consulClone.Invoke(ctx, inmem.NewString("uri", *consulUri)))
 
 	// Bind consul keyval tree to /boot/cfg
 	kv, ok := ctx.GetFolder("/n/consul/kv")
