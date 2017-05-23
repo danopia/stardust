@@ -22,7 +22,7 @@ func getOsDriver() *inmem.Folder {
 }
 
 // Function that creates a new Osfs client when invoked
-func startOsFs(input base.Entry) (output base.Entry) {
+func startOsFs(ctx base.Context, input base.Entry) (output base.Entry) {
 	// TODO: accept root path and acl info
 
 	//if _, err := os.Open("/"); err == nil {

@@ -18,13 +18,13 @@ func getInitDriver() base.Folder {
 }
 
 // Function that creates a new ray shell when invoked
-func initFunc(input base.Entry) (output base.Entry) {
+func initFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 	log.Println("init: Bootstrapping...")
 
 	s := &initSvc{
+		ctx:      ctx,
 		cfgDir:   input.(base.Folder), // TODO
 		services: make(map[string]*service),
-		handle:   base.RootSpace.NewHandle(),
 	}
 
 	for _, name := range s.cfgDir.Children() {
@@ -33,11 +33,7 @@ func initFunc(input base.Entry) (output base.Entry) {
 		}
 	}
 
-	temp := s.handle.Clone()
-	if ok := temp.Walk("/n"); ok {
-		outputParent := temp.Get().(base.Folder)
-		outputParent.Put("init", s)
-	}
+	ctx.Put("/n/init", s)
 
 	for name, svc := range s.services {
 		if !svc.running {
@@ -59,9 +55,9 @@ func initFunc(input base.Entry) (output base.Entry) {
 
 // Context for a long-term init processer
 type initSvc struct {
+	ctx      base.Context
 	cfgDir   base.Folder
 	services map[string]*service
-	handle   base.Handle
 }
 
 var _ base.Folder = (*initSvc)(nil)
@@ -76,9 +72,8 @@ func (s *initSvc) start(svc *service) {
 	var runFunc base.Function
 	var inputShape base.Shape
 
-	temp := s.handle.Clone()
-	temp.Walk(runPath)
-	switch input := temp.Get().(type) {
+	input, _ := s.ctx.Get(runPath)
+	switch input := input.(type) {
 
 	case base.Function:
 		log.Println("init:", svc.cfgDir.Name(), "is a legacy Function, please update")
@@ -91,9 +86,7 @@ func (s *initSvc) start(svc *service) {
 			return
 		}
 
-		temp2 := temp.Clone()
-		temp2.Walk("input-shape")
-		inputShape, ok = temp2.GetShape()
+		inputShape, ok = s.ctx.GetShape(path.Join(runPath, "input-shape"))
 		if !ok {
 			log.Println("No input shape found for", runPath)
 		}
@@ -106,21 +99,19 @@ func (s *initSvc) start(svc *service) {
 	var inputEntry base.Entry
 	inputPath, ok := helpers.GetChildString(svc.cfgDir, "input-path")
 	if ok {
-		temp = s.handle.Clone()
-		temp.Walk(inputPath)
-		inputEntry = temp.Get()
+		inputEntry, ok = s.ctx.Get(inputPath)
 		if !ok {
 			return
 		}
 	}
 
 	if inputShape != nil {
-		if ok := inputShape.Check(inputEntry); !ok {
+		if ok := inputShape.Check(s.ctx, inputEntry); !ok {
 			log.Println("Entry", inputPath, "doesn't match shape", inputShape, "for", runPath)
 		}
 	}
 
-	output := runFunc.Invoke(inputEntry)
+	output := runFunc.Invoke(s.ctx, inputEntry)
 
 	mountPath, ok := helpers.GetChildString(svc.cfgDir, "mount-path")
 	if !ok {
@@ -128,14 +119,10 @@ func (s *initSvc) start(svc *service) {
 	}
 
 	if mountPath != "" && output != nil {
-		parentDir := path.Dir(mountPath)
-		temp := s.handle.Clone()
-		if ok = temp.Walk(parentDir); !ok {
-			//c.writeOut(cmd, fmt.Sprintf("Couldn't find output parent named %s", parentDir))
+		if ok = s.ctx.Put(mountPath, output); !ok {
+			log.Println("Couldn't mount to", mountPath)
 			return
 		}
-		outputParent := temp.Get().(base.Folder)
-		outputParent.Put(path.Base(mountPath), output)
 		//c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
 	}
 

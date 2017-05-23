@@ -18,7 +18,7 @@ func getConsulDriver() *inmem.Folder {
 }
 
 // Function that creates a new Consul client when invoked
-func startConsul(input base.Entry) (output base.Entry) {
+func startConsul(ctx base.Context, input base.Entry) (output base.Entry) {
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		panic(err)

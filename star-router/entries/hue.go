@@ -23,7 +23,7 @@ func getHueDriver() *inmem.Folder {
 	).Freeze()
 }
 
-func discoverHue(input base.Entry) (output base.Entry) {
+func discoverHue(ctx base.Context, input base.Entry) (output base.Entry) {
 	pp, err := portal.GetPortal()
 	if err != nil {
 		log.Println("Hue Bridge Discovery error:", err)
@@ -43,13 +43,13 @@ func discoverHue(input base.Entry) (output base.Entry) {
 	return folder.Freeze()
 }
 
-func curryPair(bridge base.Entry) func(input base.Entry) (output base.Entry) {
-	return func(input base.Entry) (output base.Entry) {
-		return pairHue(bridge, input)
+func curryPair(bridge base.Entry) func(ctx base.Context, input base.Entry) (output base.Entry) {
+	return func(ctx base.Context, input base.Entry) (output base.Entry) {
+		return pairHue(ctx, bridge, input)
 	}
 }
 
-func pairHue(bridge, input base.Entry) (output base.Entry) {
+func pairHue(ctx base.Context, bridge, input base.Entry) (output base.Entry) {
 	bridgeFolder := bridge.(base.Folder)
 	ipAddress, _ := helpers.GetChildString(bridgeFolder, "lan-ip-address")
 	macAddress, _ := helpers.GetChildString(bridgeFolder, "mac-address")
@@ -85,7 +85,7 @@ func pairHue(bridge, input base.Entry) (output base.Entry) {
 }
 
 // Function that creates a new Hue client when invoked
-func startHue(input base.Entry) (output base.Entry) {
+func startHue(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
 	ipAddress, _ := helpers.GetChildString(inputFolder, "lan-ip-address")
 	secret, _ := helpers.GetChildString(inputFolder, "username")

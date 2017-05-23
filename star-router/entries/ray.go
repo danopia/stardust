@@ -21,44 +21,42 @@ func getRayDriver() base.Folder {
 	).Freeze()
 }
 
-// Read-only string impl that returns the given handle's location
-type handlePathString struct {
-	handle base.Handle
+// Function that returns the given ray's location
+type cwdProvider struct {
+	ray *rayCtx
 }
 
-var _ base.String = (*handlePathString)(nil)
+var _ base.Function = (*cwdProvider)(nil)
 
-func (e *handlePathString) Name() string {
+func (e *cwdProvider) Name() string {
 	return "cwd"
 }
 
-func (e *handlePathString) Get() (value string) {
-	return e.handle.Path()
+func (e *cwdProvider) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	return inmem.NewString("cwd", e.ray.cwd)
 }
 
 // Evaluation context for a ray
 // Handles instructions one-by-one
 
 type rayCtx struct {
+	ctx      base.Context
 	commands base.Queue
 	output   base.Log
 	//result   base.Queue
 	environ base.Folder
-	cwd     base.String
-
-	handle base.Handle
+	cwd     string
 }
 
-func newRayCtx() *rayCtx {
+func newRayCtx(cctx base.Context) *rayCtx {
 	log.Println("Starting new Ray")
 	ctx := &rayCtx{
+		ctx:      cctx,
 		commands: inmem.NewSyncQueue("commands"),
 		output:   inmem.NewLog("output"),
 		//result:   inmem.NewBufferedQueue("result", 1),
 		environ: inmem.NewFolder("environ"),
-		handle:  base.RootSpace.NewHandle(),
 	}
-	ctx.cwd = &handlePathString{ctx.handle}
 	return ctx
 }
 
@@ -98,7 +96,7 @@ func (c *rayCtx) getBundle() base.Folder {
 		c.output,
 		//c.result,
 		c.environ,
-		c.cwd,
+		&cwdProvider{c},
 	).Freeze()
 }
 
@@ -126,12 +124,11 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 	case "cat":
 		ok = true
-		for _, path := range args {
-			temp := c.handle.Clone()
-			if ok = temp.Walk(path); !ok {
-				return
+		for _, subPath := range args {
+			entry, ok := c.ctx.Get(path.Join(c.cwd, subPath))
+			if !ok {
+				return ok
 			}
-			entry := temp.Get()
 
 			switch entry := entry.(type) {
 			case base.String:
@@ -141,8 +138,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 			default:
 				c.writeOut(cmd, "Name wasn't a type that you can cat")
-				ok = false
-				return
+				return false
 			}
 		}
 
@@ -152,42 +148,42 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 			return
 		}
 
-		temp := c.handle.Clone()
-		if ok = temp.Walk(args[0]); !ok {
+		functionE, ok := c.ctx.Get(path.Join(c.cwd, args[0]))
+		if !ok {
 			c.writeOut(cmd, fmt.Sprintf("Couldn't find function named %s", args[0]))
-			return
+			return ok
 		}
-		function := temp.Get().(base.Function)
+		function := functionE.(base.Function)
 
 		var input base.Entry
 		if len(args) >= 2 && args[1] != "/dev/null" {
-			temp := c.handle.Clone()
-			if ok = temp.Walk(args[1]); !ok {
+			input, ok = c.ctx.Get(path.Join(c.cwd, args[1]))
+			if !ok {
 				c.writeOut(cmd, fmt.Sprintf("Couldn't find input named %s", args[1]))
-				return
+				return ok
 			}
-			input = temp.Get()
 		}
 
-		output := function.Invoke(input)
+		output := function.Invoke(c.ctx, input)
 
 		if len(args) >= 3 && args[2] != "/dev/null" && output != nil {
-			parentDir := path.Dir(args[2])
-			temp := c.handle.Clone()
-			if ok = temp.Walk(parentDir); !ok {
-				c.writeOut(cmd, fmt.Sprintf("Couldn't find output parent named %s", parentDir))
-				return
+			ok = c.ctx.Put(path.Join(c.cwd, args[2]), output)
+			if !ok {
+				c.writeOut(cmd, fmt.Sprintf("Couldn't write output to %s", output))
+				return ok
 			}
-			outputParent := temp.Get().(base.Folder)
-			outputParent.Put(path.Base(args[2]), output)
 			c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
 		}
 
 	case "cd":
 		if len(args) == 1 {
-			ok = c.handle.Walk(args[0])
+			_, ok = c.ctx.GetFolder(path.Join(c.cwd, args[0]))
+			if ok {
+				c.cwd = path.Join(c.cwd, args[0])
+			}
 		} else if len(args) == 0 {
-			ok = c.handle.Walk("/")
+			c.cwd = ""
+			ok = true
 		}
 
 	case "echo":
@@ -198,16 +194,11 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	case "ls":
 		var folder base.Folder
 		if len(args) == 1 {
-			temp := c.handle.Clone()
-			if ok = temp.Walk(args[0]); !ok {
-				return
-			}
-
-			if folder, ok = temp.GetFolder(); !ok {
+			if folder, ok = c.ctx.GetFolder(path.Join(c.cwd, args[0])); !ok {
 				return
 			}
 		} else if len(args) == 0 {
-			if folder, ok = c.handle.GetFolder(); !ok {
+			if folder, ok = c.ctx.GetFolder(c.cwd); !ok {
 				return
 			}
 		} else {
@@ -222,16 +213,11 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	case "ll":
 		var folder base.Folder
 		if len(args) == 1 {
-			temp := c.handle.Clone()
-			if ok = temp.Walk(args[0]); !ok {
-				return
-			}
-
-			if folder, ok = temp.GetFolder(); !ok {
+			if folder, ok = c.ctx.GetFolder(path.Join(c.cwd, args[0])); !ok {
 				return
 			}
 		} else if len(args) == 0 {
-			if folder, ok = c.handle.GetFolder(); !ok {
+			if folder, ok = c.ctx.GetFolder(c.cwd); !ok {
 				return
 			}
 		} else {
@@ -279,9 +265,9 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 }
 
 // Function that creates a new ray shell when invoked
-func rayFunc(input base.Entry) (output base.Entry) {
+func rayFunc(cctx base.Context, input base.Entry) (output base.Entry) {
 	// Start a new command evaluator
-	ctx := newRayCtx()
+	ctx := newRayCtx(cctx)
 
 	switch input := input.(type) {
 	case base.String:

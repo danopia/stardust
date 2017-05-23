@@ -26,13 +26,13 @@ type Folder interface {
 // Its own shape: type String, children []Shape, validate Function
 type Shape interface {
 	Folder
-	Check(entry Entry) (ok bool)
+	Check(ctx Context, entry Entry) (ok bool)
 }
 
 // A node that can be invoked to map an Entry
 type Function interface {
 	Entry
-	Invoke(input Entry) (output Entry)
+	Invoke(ctx Context, input Entry) (output Entry)
 }
 
 // A node that has ordered enumerable children

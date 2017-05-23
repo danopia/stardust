@@ -5,8 +5,6 @@ import (
 //"strings"
 )
 
-var RootSpace *Namespace
-
 type Namespace struct {
 	BaseUri string
 	Root    Entry

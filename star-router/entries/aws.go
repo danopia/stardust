@@ -19,7 +19,7 @@ func getAwsDriver() *inmem.Folder {
 }
 
 // Function that creates a new AWS client when invoked
-func startAws(input base.Entry) (output base.Entry) {
+func startAws(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
 	accessKey, _ := helpers.GetChildString(inputFolder, "access_key_id")
 	secretKey, _ := helpers.GetChildString(inputFolder, "secret_access_key")
@@ -89,7 +89,7 @@ func (e *awsSqs) Fetch(name string) (entry base.Entry, ok bool) {
 	switch name {
 
 	case "receive-message":
-		return inmem.NewFunction("receive-message", func(input base.Entry) (output base.Entry) {
+		return inmem.NewFunction("receive-message", func(ctx base.Context, input base.Entry) (output base.Entry) {
 			inputFolder := input.(base.Folder)
 			queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
 

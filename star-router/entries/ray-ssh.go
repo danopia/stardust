@@ -24,8 +24,9 @@ func getRaySshDriver() base.Folder {
 }
 
 // Function that creates a new ray shell when invoked
-func raySshFunc(input base.Entry) (output base.Entry) {
+func raySshFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 	service := &raySsh{
+		ctx:       ctx,
 		rayFunc:   input.(base.Folder), // function shape
 		tmpFolder: inmem.NewFolder("ray-ssh"),
 	}
@@ -37,6 +38,7 @@ func raySshFunc(input base.Entry) (output base.Entry) {
 
 // Context for a running SSH server
 type raySsh struct {
+	ctx       base.Context
 	sshConfig *ssh.ServerConfig
 	listener  net.Listener
 	rayFunc   base.Folder
@@ -142,7 +144,7 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 		panic("wat-b")
 	}
 
-	ray := rayFunc.Invoke(nil).(base.Folder)
+	ray := rayFunc.Invoke(e.ctx, nil).(base.Folder)
 	cmdEntry, ok := ray.Fetch("commands")
 	if !ok {
 		panic("wat0")

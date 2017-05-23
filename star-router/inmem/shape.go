@@ -54,8 +54,8 @@ func NewShape(config base.Folder) *Shape {
 		}
 	}
 
-	s.validateFunc = NewFunction("validate", func(input base.Entry) (output base.Entry) {
-		if s.Check(input) {
+	s.validateFunc = NewFunction("validate", func(ctx base.Context, input base.Entry) (output base.Entry) {
+		if s.Check(ctx, input) {
 			output = NewString("result", "ok")
 		}
 		return
@@ -63,7 +63,7 @@ func NewShape(config base.Folder) *Shape {
 	return s
 }
 
-func (e *Shape) Check(entry base.Entry) (ok bool) {
+func (e *Shape) Check(ctx base.Context, entry base.Entry) (ok bool) {
 	if e.optional && entry == nil {
 		return true
 	}
@@ -80,15 +80,13 @@ func (e *Shape) Check(entry base.Entry) (ok bool) {
 				actual, _ := folder.Fetch(prop.Name())
 				// TODO: not recursive, not DRY, doesn't handle context
 				if link, ok := actual.(base.Link); ok {
-					temp := base.RootSpace.NewHandle()
-					if !temp.Walk(link.Target()) {
-						log.Println("Following link for", prop, "failed")
-						ok = false
+					actual, ok = ctx.Get(link.Target())
+					if !ok {
+						log.Println("Following link for", prop, "to", link.Target(), "failed")
 						continue
 					}
-					actual = temp.Get()
 				}
-				if !prop.Check(actual) {
+				if !prop.Check(ctx, actual) {
 					ok = false
 				}
 			}

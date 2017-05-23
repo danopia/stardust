@@ -20,7 +20,7 @@ func getHttpdDriver() base.Folder {
 }
 
 // Function that creates a new HTTP server when invoked
-func httpdFunc(input base.Entry) (output base.Entry) {
+func httpdFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 	svc := &httpd{
 		root: input.(base.Folder),
 		//rayFunc:   input.(base.Function), // TODO
