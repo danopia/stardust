@@ -27,7 +27,7 @@ func startOsFs(ctx base.Context, input base.Entry) (output base.Entry) {
 
 	//if _, err := os.Open("/"); err == nil {
 	return &osFolder{
-		root: "..",
+		root: ".",
 		path: "",
 		//file: file,
 	}
