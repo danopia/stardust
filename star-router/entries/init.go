@@ -103,6 +103,8 @@ func (s *initSvc) start(svc *service) {
 		if !ok {
 			return
 		}
+	} else {
+		inputEntry, _ = svc.cfgDir.Fetch("input")
 	}
 
 	if inputShape != nil {

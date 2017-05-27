@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/danopia/stardust/star-router/base"
+	"github.com/danopia/stardust/star-router/helpers"
 	"github.com/danopia/stardust/star-router/inmem"
 )
 
@@ -25,9 +26,14 @@ func getOsDriver() *inmem.Folder {
 func startOsFs(ctx base.Context, input base.Entry) (output base.Entry) {
 	// TODO: accept root path and acl info
 
+	hostPath := "."
+	if folder, ok := input.(base.Folder); ok {
+		hostPath, _ = helpers.GetChildString(folder, "host-path")
+	}
+
 	//if _, err := os.Open("/"); err == nil {
 	return &osFolder{
-		root: ".",
+		root: hostPath,
 		path: "",
 		//file: file,
 	}

@@ -1,5 +1,5 @@
 {
-  "date": "2017-05-26T21:13:59.253003875-07:00",
+  "date": "2017-05-27T13:50:06.452117567-07:00",
   "connection_info": {
     "host": "http://127.0.0.1:8500"
   },
@@ -22,6 +22,8 @@
     "services/hue-client/input-path": "/boot/cfg/hue-bridge",
     "services/hue-client/mount-path": "/n/hue",
     "services/hue-client/path": "/rom/drv/hue/init-bridge",
+    "services/os-fs/input/": "",
+    "services/os-fs/input/host-path": "../web-frontend/",
     "services/os-fs/mount-path": "/n/osfs",
     "services/os-fs/path": "/rom/drv/host-os/fs",
     "services/ray-ssh/input-path": "/rom/bin/ray",
