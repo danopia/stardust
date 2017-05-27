@@ -9,6 +9,7 @@ func newShapesEntry() *inmem.Folder {
 		functionShape,
 		awsConfigShape,
 		hueBridgeConfigShape,
+		awsSqsReceiveMessageInputShape,
 	).Freeze()
 }
 
@@ -39,6 +40,17 @@ var awsConfigShape *inmem.Shape = inmem.NewShape(
 				inmem.NewString("optional", "yes"),
 			),
 			inmem.NewString("region", "String"),
+		),
+	))
+
+var awsSqsReceiveMessageInputShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("sqs-receive-message-input",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("queue-url", "String"),
+			inmem.NewString("max-number-of-messages", "String"),
+			inmem.NewString("wait-time-seconds", "String"),
+			inmem.NewString("visibility-timeout", "String"),
 		),
 	))
 

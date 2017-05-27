@@ -89,29 +89,35 @@ func (e *awsSqs) Fetch(name string) (entry base.Entry, ok bool) {
 	switch name {
 
 	case "receive-message":
-		return inmem.NewFunction("receive-message", func(ctx base.Context, input base.Entry) (output base.Entry) {
-			inputFolder := input.(base.Folder)
-			queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
+		return inmem.NewFolderOf("receive-message",
+			inmem.NewLink("input-shape", "/rom/shapes/sqs-receive-message-input"),
+			inmem.NewFunction("invoke", func(ctx base.Context, input base.Entry) (output base.Entry) {
+				inputFolder := input.(base.Folder)
+				queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
+				// inmem.NewString("max-number-of-messages", "String"),
+				// inmem.NewString("wait-time-seconds", "String"),
+				// inmem.NewString("visibility-timeout", "String"),
 
-			params := &sqs.ReceiveMessageInput{
-				QueueUrl: aws.String(queueUrl),
-			}
-
-			resp, err := e.sqs.ReceiveMessage(params)
-			if err == nil {
-				if len(resp.Messages) == 0 {
-					return nil
+				params := &sqs.ReceiveMessageInput{
+					QueueUrl: aws.String(queueUrl),
 				}
 
-				msg := resp.Messages[0]
-				return inmem.NewFolderOf("received-message",
-					inmem.NewString("msg-id", *msg.MessageId),
-					inmem.NewString("body", *msg.Body),
-					inmem.NewString("handle", *msg.ReceiptHandle),
-				).Freeze()
-			}
-			return nil
-		}), true
+				resp, err := e.sqs.ReceiveMessage(params)
+				if err == nil {
+					if len(resp.Messages) == 0 {
+						return nil
+					}
+
+					msg := resp.Messages[0]
+					return inmem.NewFolderOf("received-message",
+						inmem.NewString("msg-id", *msg.MessageId),
+						inmem.NewString("body", *msg.Body),
+						inmem.NewString("handle", *msg.ReceiptHandle),
+					).Freeze()
+				}
+				return nil
+			}),
+		), true
 
 	default:
 		return
