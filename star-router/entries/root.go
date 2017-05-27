@@ -19,6 +19,7 @@ func newRomEntry() *inmem.Folder {
 	drivers := inmem.NewFolderOf("drv",
 		getOsDriver(),
 		getAwsDriver(),
+		getAwsNsDriver(),
 		getConsulDriver(),
 		getHueDriver(),
 	).Freeze()
