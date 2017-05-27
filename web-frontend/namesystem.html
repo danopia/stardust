@@ -1,0 +1,111 @@
+<script type="text/x-template" id="item-template">
+  <li>
+    <div
+      :class="{bold: isFolder}"
+      @click="toggle">
+      {{name}}
+      [{{open ? '-' : '+'}}]
+    </div>
+    <ul v-show="open" v-if="isFolder">
+      <item
+        class="item"
+        v-for="child in entry.children"
+        :key="child.name"
+        :name="child.name"
+        :path="path + '/' + child.name">
+      </item>
+      <!--li class="add" @click="addChild">+</li-->
+    </ul>
+  </li>
+</script>
+
+<div id="app">
+  <item
+    class="item"
+    name="root"
+    :path="rootPath"
+    :start-open="true">
+  </item>
+</div>
+
+<script src="https://unpkg.com/vue"></script>
+<script type="text/javascript">
+  let root = "/~~";
+
+  Vue.component('item', {
+    template: '#item-template',
+    props: {
+      name: String,
+      path: String,
+      startOpen: Boolean
+    },
+    data: function () {
+      if (this.startOpen) {
+        this.request()
+      }
+
+      return {
+        entry: {},
+        open: !!this.startOpen,
+      };
+    },
+    computed: {
+      isFolder: function () {
+        return this.entry.type === "Folder";
+      },
+    },
+    methods: {
+      toggle: function () {
+        this.open = !this.open;
+
+        if (this.open && !this.requested) {
+          this.request();
+        }
+      },
+      request: function () {
+        this.requested = true;
+
+        fetch(this.path, {headers: {Accept: 'application/json'}})
+          .then(x => x.json())
+          .then(x => this.entry = x);
+      },
+      /*changeType: function () {
+        if (!this.isFolder) {
+          Vue.set(this.entry, 'children', [])
+          this.addChild()
+          this.open = true
+        }
+      },
+      addChild: function () {
+        this.model.children.push({
+          name: 'new stuff'
+        })
+      }*/
+    }
+  });
+
+  var app = new Vue({
+    el: '#app',
+    data: {
+      rootPath: "/~~/",
+    },
+  });
+</script>
+
+<style type="text/css">
+  body {
+    font-family: Menlo, Consolas, monospace;
+    color: #444;
+  }
+  .item {
+    cursor: pointer;
+  }
+  .bold {
+    font-weight: bold;
+  }
+  ul {
+    padding-left: 1em;
+    line-height: 1.5em;
+    list-style-type: dot;
+  }
+</style>

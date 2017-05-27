@@ -2,6 +2,7 @@ package entries
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -74,11 +75,40 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The web frontend will expect parseable data
+	var useJson bool
+	if accepts := r.Header["Accept"]; len(accepts) > 0 {
+		if strings.HasPrefix(accepts[0], "application/json") {
+			useJson = true
+		}
+	}
+
 	// If trailing slash, go right to folder mode
 	if isDir {
 		entry, ok := handle.GetFolder()
 		if !ok {
 			http.Error(w, "Folder not found", http.StatusNotFound)
+			return
+		}
+
+		if useJson {
+			names := entry.Children()
+			entries := make([]map[string]interface{}, len(names))
+			for idx, name := range names {
+				entries[idx] = map[string]interface{}{
+					"name": name,
+				}
+			}
+
+			obj := map[string]interface{}{
+				"name":     entry.Name(),
+				"type":     "Folder",
+				"children": entries,
+			}
+			json, _ := json.Marshal(obj)
+
+			w.Header().Add("content-type", "application/json; charset=UTF-8")
+			w.Write([]byte(json))
 			return
 		}
 
@@ -128,7 +158,21 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	case base.String:
 		value := entry.Get()
-		w.Write([]byte(value))
+
+		if useJson {
+			obj := map[string]interface{}{
+				"name":  entry.Name(),
+				"type":  "String",
+				"value": value,
+			}
+
+			json, _ := json.Marshal(obj)
+			w.Header().Add("content-type", "application/json; charset=UTF-8")
+			w.Write([]byte(json))
+
+		} else {
+			w.Write([]byte(value))
+		}
 
 	case base.Folder:
 		// not in dir mode, redirect
