@@ -1,0 +1,18 @@
+body {
+  font-family: Menlo, Consolas, monospace;
+  color: #444;
+}
+
+.folder-name {
+  cursor: pointer;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+ul {
+  padding-left: 1em;
+  line-height: 1.5em;
+  list-style: none;
+}

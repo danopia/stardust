@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/inmem"
@@ -125,7 +127,13 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			obj["children"] = entries
 
 		}
-		json, _ := json.Marshal(obj)
+
+		json, err := json.Marshal(obj)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Add("content-type", "application/json; charset=UTF-8")
 		w.Write([]byte(json))
 		return
@@ -193,34 +201,53 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("%s/", r.RequestURI), http.StatusFound)
 
 	case base.File:
-		var offset int64
-		chunkSize := 4 * 1024
-		for {
-			log.Println("reading at offset", offset)
-			if data := entry.Read(offset, chunkSize); len(data) > 0 {
-				log.Println("got", len(data), "bytes")
-				w.Write(data)
-				offset += int64(len(data))
-			} else {
-				return
-			}
-		}
+		readSeeker := &fileContentReader{entry, 0}
+		http.ServeContent(w, r, entry.Name(), time.Unix(0, 0), readSeeker)
 
 	default:
 		http.Error(w, "Name cannot be rendered", http.StatusNotImplemented)
 	}
 
 	/*
-
 		w.Header().Add("access-control-allow-origin", "*")
 		w.Header().Add("cache-control", "no-store, no-cache, must-revalidate, max-age=0")
 		w.Header().Add("content-type", "application/json; charset=UTF-8")
 		w.Header().Add("vary", "origin")
-
-		payload, err := json.Marshal(info)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 	*/
+}
+
+type fileContentReader struct {
+	entry  base.File
+	offset int64
+}
+
+func (r *fileContentReader) Read(p []byte) (n int, err error) {
+	bytes := r.entry.Read(r.offset, len(p))
+	copy(p, bytes)
+	n = len(bytes)
+	if n < len(p) {
+		err = io.EOF
+	}
+	return
+}
+
+func (r *fileContentReader) Seek(offset int64, whence int) (n int64, err error) {
+	size := r.entry.GetSize()
+	switch whence {
+
+	case io.SeekStart:
+		r.offset = offset
+
+	case io.SeekCurrent:
+		r.offset = r.offset + offset
+
+	case io.SeekEnd:
+		r.offset = size + offset
+	}
+
+	if r.offset < 0 {
+		err = io.EOF
+	}
+	n = r.offset
+	return
 }
