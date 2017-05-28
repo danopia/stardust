@@ -8,35 +8,37 @@
   <ul id="root-tree" class="tree">
     <entry-item
       class="entry-item"
-      name="/"
-      :path="rootPath"
+      name="sd://apt.danopia.net"
+      :path="''"
       :start-open="true">
     </entry-item>
   </ul>
 
   <div id="edit-pane">
     <ul id="tab-bar">
-      <li>namesystem.html</li>
-      <li>namesystem.css</li>
-      <li>namesystem.js</li>
+      <li v-for="tab in tabList" class="todo-tab"
+          @click="activateTab(tab)"
+          :class="{active: currentTab === tab}">
+        <i class="material-icons tree-icon">{{tab.icon}}</i>
+        <span class="label">{{tab.label}}</span>
+        <i class="material-icons tree-icon close-btn"
+            @click.stop="closeTab(tab)">close</i>
+      </li>
     </ul>
 
-    <div class="editor">
-      hello world
-    </div>
+    <component
+        v-for="tab in tabList"
+        v-show="tab === currentTab"
+        :is="tab.type"
+        :tab="tab"></component>
   </div>
 </div>
-
-<!--
-:class="{bold: isFolder}"
-<li class="add" @click="addChild">+</li>
--->
 
 <script type="text/x-template" id="entry-item">
   <li class="entry-item">
     <div
       class="folder-name"
-      @click="toggle">
+      @click="activate">
       <i class="material-icons tree-icon">{{icon}}</i>
       {{name}}
     </div>
@@ -47,15 +49,14 @@
         :key="child.name"
         :name="child.name"
         :path="path + '/' + child.name"
-        :start-open="name === '/'">
+        :start-open="name === 'sd://apt.danopia.net'">
       </entry-item>
+
       <create-entry-item
-        :parent="path">
+        :parent="path"
+        :parentName="name">
       </create-entry-item>
     </ul>
-    <div v-show="open" v-if="entry.type === 'String'">
-      {{entry.value}}
-    </div>
   </li>
 </script>
 
@@ -63,11 +64,37 @@
   <li class="create-entry-item">
     <div
       class="folder-name"
-      @click="toggle">
+      @click="activate">
       <i class="material-icons tree-icon">add</i>
       create...
     </div>
   </li>
+</script>
+
+<script type="text/x-template" id="create-name">
+  <form class="form-panel"
+      @submit="submit">
+    <h3 class="form-row">Create Entry</h3>
+    <label class="form-row">
+      <span>Parent:</span>
+      <code>{{tab.path}}</code>
+    </label>
+    <label class="form-row">
+      <span>Name:</span>
+      <input type="text" name="name" autofocus>
+    </label>
+    <label class="form-row">
+      <span>Type:</span>
+      <select name="type">
+        <option>String</option>
+        <option>File</option>
+        <option>Folder</option>
+      </select>
+    </label>
+    <div class="form-row">
+      <button type="submit">Save</button>
+    </div>
+  </form>
 </script>
 
 <script src="https://unpkg.com/vue"></script>

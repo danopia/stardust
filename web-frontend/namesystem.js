@@ -8,13 +8,10 @@ Vue.component('entry-item', {
     startOpen: Boolean,
   },
   data: function () {
-    if (this.startOpen) {
-      this.request()
-    }
-
     return {
       entry: {},
       open: !!this.startOpen,
+      loader: this.startOpen ? this.load() : null,
     };
   },
   computed: {
@@ -33,19 +30,28 @@ Vue.component('entry-item', {
     },
   },
   methods: {
-    toggle: function () {
-      this.open = !this.open;
-
-      if (this.open && !this.requested) {
-        this.request();
-      }
+    activate: function () {
+      this.load().then((entry) => {
+        if (entry.type === 'Folder') {
+          this.open = !this.open;
+        } else {
+          app.openEditor({
+            type: 'edit-' + entry.type.toLowerCase(),
+            label: this.name,
+            icon: 'edit',
+            path: this.path,
+          });
+        }
+      });
     },
-    request: function () {
-      this.requested = true;
-
-      fetch(this.path, {headers: {Accept: 'application/json'}})
-        .then(x => x.json())
-        .then(x => this.entry = x);
+    load: function () {
+      if (!this.loader) {
+        this.loader = fetch(root + this.path, {
+          headers: {Accept: 'application/json'},
+        }).then(x => x.json())
+          .then(x => this.entry = x);
+      }
+      return this.loader;
     },
     /*changeType: function () {
       if (!this.isFolder) {
@@ -66,26 +72,40 @@ Vue.component('create-entry-item', {
   template: '#create-entry-item',
   props: {
     parent: String,
-    startOpen: Boolean,
-  },
-  data: function () {
-    return {
-      type: null,
-      open: !!this.startOpen,
-    };
-  },
-  computed: {
+    parentName: String,
   },
   methods: {
-    toggle: function () {
-      this.open = !this.open;
+    activate: function () {
+      app.openEditor({
+        type: 'create-name',
+        label: 'create (' + this.parentName + ')',
+        icon: 'add',
+        path: this.parent,
+      });
     },
-    create: function () {
+    /*create: function () {
       this.requested = true;
 
       fetch(this.path, {headers: {Accept: 'application/json'}})
         .then(x => x.json())
         .then(x => this.entry = x);
+    },*/
+  }
+});
+
+Vue.component('create-name', {
+  template: '#create-name',
+  props: {
+    tab: Object,
+  },
+  data: function () {
+    return {
+    };
+  },
+  computed: {
+  },
+  methods: {
+    activate: function () {
     },
   }
 });
@@ -93,6 +113,45 @@ Vue.component('create-entry-item', {
 var app = new Vue({
   el: '#app',
   data: {
-    rootPath: "/~~/",
+    rootPath: "/~~",
+    tabList: [],
+    tabKeys: {},
+    currentTab: null,
+  },
+  created() {
+    this.openEditor({"type":"edit-string","label":"init","icon":"edit","path":"/boot/init"});
+    this.openEditor({"type":"edit-file","label":"namesystem.html","icon":"edit","path":"/n/osfs/namesystem.html"});
+    this.openEditor({"type":"create-name","label":"create (tmp)","icon":"add","path":"/tmp"});
+  },
+  methods: {
+    // Focus or open a new editor for given details
+    openEditor(deets) {
+      deets.key = [deets.path, deets.type].join(':');
+      if (deets.key in this.tabKeys) {
+        this.activateTab(this.tabKeys[deets.key]);
+      } else {
+        console.log("Opening editor", deets.key, 'labelled', deets.label);
+        this.currentTab = deets;
+        this.tabList.push(deets);
+        this.tabKeys[deets.key] = deets;
+      }
+    },
+    activateTab(tab) {
+      console.log("Switching to tab", tab.label);
+      this.currentTab = tab;
+    },
+    closeTab(tab) {
+      const idx = this.tabList.indexOf(tab);
+      console.log("Closing tab", tab.label, "idx", idx);
+      if (idx !== -1) {
+        this.tabList.splice(idx, 1);
+      }
+      delete this.tabKeys[tab.key];
+
+      if (this.currentTab === tab) {
+        this.currentTab = this.tabList[0];
+        const idx = this.tabList.indexOf(this.currentTab);
+      }
+    }
   },
 });
