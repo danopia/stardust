@@ -1,13 +1,29 @@
+html {
+  height: 100%;
+}
+
 body {
   font-family: 'Roboto';
-  color: #444;
+  background-color: #333;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  display: flex;
+}
+
+#app {
+  display: flex;
+  flex: 1;
 }
 
 .folder-name {
   cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.1s;
 }
 .folder-name:hover {
-  background-color: rgba(0, 0, 0, 0.13);
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .bold {
@@ -25,16 +41,58 @@ ul {
   vertical-align: top;
 }
 
+#root-tree {
+  width: 10em;
+  display: flex; /* shows x-scrollbar */
+  overflow: scroll;
+  margin: 0;
+  padding: 1em;
+}
+#root-tree > li {
+  flex: 1;
+}
+
 .sub-tree {
   padding-left: 0.6em;
   margin-left: 0.8em;
-  border-left: 1px dashed #666;
+  border-left: 1px dashed #999;
   border-radius: 0 0 0 10px;
 }
 
 .create-entry-item .folder-name {
-  color: #999;
+  color: #666;
+  transition: color 0.3s;
 }
 .create-entry-item:hover .folder-name {
   color: inherit;
+}
+
+#edit-pane {
+  border-left: 1px solid #666;
+  flex: 1;
+}
+
+#tab-bar {
+  background-color: #222;
+  border-bottom: 1px solid #444;
+  height: 2em;
+  display: flex;
+  overflow-x: scroll;
+  align-items: flex-end;
+  margin: 0;
+  padding: 0.5em 1em 0;
+}
+
+#tab-bar li {
+  background-color: #333;
+  padding: 0.25em 0.5em;
+  border-radius: 5px 5px 0 0;
+  font-size: 0.8em;
+  min-width: 10em;
+  text-align: center;
+  cursor: pointer;
+  margin-right: 0.5em;
+}
+#tab-bar li:hover {
+  background-color: #444;
 }

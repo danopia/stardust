@@ -25,8 +25,10 @@ Vue.component('entry-item', {
       switch (this.entry.type) {
         case "Folder":
           return this.open ? "folder_open" : "folder";
+        case undefined: // TODO: unugly
+          return this.open ? "expand_less" : "chevron_right";
         default:
-          return this.open ? "remove" : "add";
+          return "insert_drive_file";
       }
     },
   },
