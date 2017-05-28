@@ -10,6 +10,7 @@ body {
   padding: 0;
   height: 100%;
   display: flex;
+  flex-direction: column;
 }
 
 #app {
@@ -42,11 +43,12 @@ ul {
 }
 
 #root-tree {
-  width: 10em;
+  min-width: 5em;
   display: flex; /* shows x-scrollbar */
-  overflow: scroll;
+  overflow: auto;
   margin: 0;
   padding: 1em;
+  flex: 2;
 }
 #root-tree > li {
   flex: 1;
@@ -69,15 +71,15 @@ ul {
 
 #edit-pane {
   border-left: 1px solid #666;
-  flex: 1;
+  flex: 6;
 }
 
 #tab-bar {
   background-color: #222;
   border-bottom: 1px solid #444;
-  height: 2em;
+  height: 4em;
   display: flex;
-  overflow-x: scroll;
+  overflow-x: auto;
   align-items: flex-end;
   margin: 0;
   padding: 0.5em 1em 0;
