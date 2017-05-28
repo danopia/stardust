@@ -5,7 +5,7 @@ Vue.component('entry-item', {
   props: {
     name: String,
     path: String,
-    startOpen: Boolean
+    startOpen: Boolean,
   },
   data: function () {
     if (this.startOpen) {
@@ -57,6 +57,34 @@ Vue.component('entry-item', {
         name: 'new stuff'
       })
     }*/
+  }
+});
+
+Vue.component('create-entry-item', {
+  template: '#create-entry-item',
+  props: {
+    parent: String,
+    startOpen: Boolean,
+  },
+  data: function () {
+    return {
+      type: null,
+      open: !!this.startOpen,
+    };
+  },
+  computed: {
+  },
+  methods: {
+    toggle: function () {
+      this.open = !this.open;
+    },
+    create: function () {
+      this.requested = true;
+
+      fetch(this.path, {headers: {Accept: 'application/json'}})
+        .then(x => x.json())
+        .then(x => this.entry = x);
+    },
   }
 });
 

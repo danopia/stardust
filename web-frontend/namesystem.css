@@ -6,6 +6,9 @@ body {
 .folder-name {
   cursor: pointer;
 }
+.folder-name:hover {
+  background-color: rgba(0, 0, 0, 0.13);
+}
 
 .bold {
   font-weight: bold;
@@ -15,6 +18,7 @@ ul {
   padding-left: 1em;
   line-height: 1.5em;
   list-style: none;
+  margin-bottom: 0.5em;
 }
 
 .tree-icon {
@@ -24,5 +28,13 @@ ul {
 .sub-tree {
   padding-left: 0.6em;
   margin-left: 0.8em;
-  border-left: 1px dashed #888;
+  border-left: 1px dashed #666;
+  border-radius: 0 0 0 10px;
+}
+
+.create-entry-item .folder-name {
+  color: #999;
+}
+.create-entry-item:hover .folder-name {
+  color: inherit;
 }

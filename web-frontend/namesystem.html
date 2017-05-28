@@ -21,24 +21,38 @@
 -->
 
 <script type="text/x-template" id="entry-item">
-  <li>
+  <li class="entry-item">
     <div
       class="folder-name"
       @click="toggle">
       <i class="material-icons tree-icon">{{icon}}</i>
       {{name}}
     </div>
+
     <ul v-show="open" v-if="isFolder" class="sub-tree">
       <entry-item
-        class="item"
         v-for="child in entry.children"
         :key="child.name"
         :name="child.name"
         :path="path + '/' + child.name">
       </entry-item>
+      <create-entry-item
+        :parent="path">
+      </create-entry-item>
     </ul>
     <div v-show="open" v-if="entry.type === 'String'">
       {{entry.value}}
+    </div>
+  </li>
+</script>
+
+<script type="text/x-template" id="create-entry-item">
+  <li class="create-entry-item">
+    <div
+      class="folder-name"
+      @click="toggle">
+      <i class="material-icons tree-icon">add_circle_outline</i>
+      create...
     </div>
   </li>
 </script>
