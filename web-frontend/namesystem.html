@@ -46,7 +46,8 @@
         v-for="child in entry.children"
         :key="child.name"
         :name="child.name"
-        :path="path + '/' + child.name">
+        :path="path + '/' + child.name"
+        :start-open="name === '/'">
       </entry-item>
       <create-entry-item
         :parent="path">
