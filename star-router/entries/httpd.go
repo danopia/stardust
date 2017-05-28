@@ -83,7 +83,6 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-
 	if useJson {
 		entry := handle.Get()
 		if entry == nil {
@@ -92,8 +91,8 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		obj := map[string]interface{}{
-			"name":  entry.Name(),
-			"type":  "Unknown",
+			"name": entry.Name(),
+			"type": "Unknown",
 		}
 
 		// TODO: attempt to match against relevant shapes
@@ -144,6 +143,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		buffer.WriteString("<!doctype html><title>")
 		buffer.WriteString(entry.Name())
 		buffer.WriteString("</title>")
+		buffer.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>")
 
 		buffer.WriteString("<h3>")
 		webPath := "/~~"
