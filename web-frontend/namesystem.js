@@ -21,6 +21,14 @@ Vue.component('entry-item', {
     isFolder: function () {
       return this.entry.type === "Folder";
     },
+    icon: function () {
+      switch (this.entry.type) {
+        case "Folder":
+          return this.open ? "folder_open" : "folder";
+        default:
+          return this.open ? "remove" : "add";
+      }
+    },
   },
   methods: {
     toggle: function () {

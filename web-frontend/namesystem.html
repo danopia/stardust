@@ -15,16 +15,20 @@
   </ul>
 </div>
 
+<!--
+:class="{bold: isFolder}"
+<li class="add" @click="addChild">+</li>
+-->
+
 <script type="text/x-template" id="entry-item">
   <li>
     <div
       class="folder-name"
-      :class="{bold: isFolder}"
       @click="toggle">
+      <i class="material-icons tree-icon">{{icon}}</i>
       {{name}}
-      [{{open ? '-' : '+'}}]
     </div>
-    <ul v-show="open" v-if="isFolder">
+    <ul v-show="open" v-if="isFolder" class="sub-tree">
       <entry-item
         class="item"
         v-for="child in entry.children"
@@ -32,7 +36,6 @@
         :name="child.name"
         :path="path + '/' + child.name">
       </entry-item>
-      <!--li class="add" @click="addChild">+</li-->
     </ul>
     <div v-show="open" v-if="entry.type === 'String'">
       {{entry.value}}

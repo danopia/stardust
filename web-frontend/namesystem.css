@@ -1,5 +1,5 @@
 body {
-  font-family: Menlo, Consolas, monospace;
+  font-family: 'Roboto';
   color: #444;
 }
 
@@ -15,4 +15,14 @@ ul {
   padding-left: 1em;
   line-height: 1.5em;
   list-style: none;
+}
+
+.tree-icon {
+  vertical-align: top;
+}
+
+.sub-tree {
+  padding-left: 0.6em;
+  margin-left: 0.8em;
+  border-left: 1px dashed #888;
 }
