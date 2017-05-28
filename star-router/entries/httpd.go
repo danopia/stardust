@@ -83,15 +83,37 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If trailing slash, go right to folder mode
-	if isDir {
-		entry, ok := handle.GetFolder()
-		if !ok {
-			http.Error(w, "Folder not found", http.StatusNotFound)
+
+	if useJson {
+		entry := handle.Get()
+		if entry == nil {
+			http.Error(w, "Entry not found", http.StatusNotFound)
 			return
 		}
 
-		if useJson {
+		obj := map[string]interface{}{
+			"name":  entry.Name(),
+			"type":  "Unknown",
+		}
+
+		// TODO: attempt to match against relevant shapes
+
+		switch entry := entry.(type) {
+
+		case base.String:
+			obj["type"] = "String"
+			obj["value"] = entry.Get()
+
+		case base.Function:
+			// Functions don't say anything about themselves
+			// You need the Function shape to really get anything
+			// TODO: should be able to invoke tho
+			obj["type"] = "Function"
+
+		case base.Folder:
+			// normally we'd redirect to keep HTML relative links working
+			// but the JSON clients should know what to do
+
 			names := entry.Children()
 			entries := make([]map[string]interface{}, len(names))
 			for idx, name := range names {
@@ -100,15 +122,21 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			obj := map[string]interface{}{
-				"name":     entry.Name(),
-				"type":     "Folder",
-				"children": entries,
-			}
-			json, _ := json.Marshal(obj)
+			obj["type"] = "Folder"
+			obj["children"] = entries
 
-			w.Header().Add("content-type", "application/json; charset=UTF-8")
-			w.Write([]byte(json))
+		}
+		json, _ := json.Marshal(obj)
+		w.Header().Add("content-type", "application/json; charset=UTF-8")
+		w.Write([]byte(json))
+		return
+	}
+
+	// If trailing slash, go right to folder mode
+	if isDir {
+		entry, ok := handle.GetFolder()
+		if !ok {
+			http.Error(w, "Folder not found", http.StatusNotFound)
 			return
 		}
 
@@ -158,21 +186,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	case base.String:
 		value := entry.Get()
-
-		if useJson {
-			obj := map[string]interface{}{
-				"name":  entry.Name(),
-				"type":  "String",
-				"value": value,
-			}
-
-			json, _ := json.Marshal(obj)
-			w.Header().Add("content-type", "application/json; charset=UTF-8")
-			w.Write([]byte(json))
-
-		} else {
-			w.Write([]byte(value))
-		}
+		w.Write([]byte(value))
 
 	case base.Folder:
 		// not in dir mode, redirect
