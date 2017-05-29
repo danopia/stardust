@@ -247,6 +247,7 @@ func (r *fileContentReader) Read(p []byte) (n int, err error) {
 	if n < len(p) {
 		err = io.EOF
 	}
+	r.offset += int64(n)
 	return
 }
 

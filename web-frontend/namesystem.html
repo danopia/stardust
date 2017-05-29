@@ -19,6 +19,7 @@
     <ul id="tab-bar">
       <li v-for="tab in tabList" class="todo-tab"
           @click="activateTab(tab)"
+          :key="tab.key"
           :class="{active: currentTab === tab}">
         <i class="material-icons tree-icon">{{tab.icon}}</i>
         <span class="label">{{tab.label}}</span>
@@ -30,6 +31,7 @@
     <component
         v-for="tab in tabList"
         v-show="tab === currentTab"
+        :key="tab.key"
         :is="tab.type"
         :tab="tab"></component>
   </div>
@@ -101,5 +103,25 @@
 </div>
 </script>
 
+
+<script type="text/x-template" id="edit-file">
+  <div class="panel-parent cm-panel">
+    <codemirror :code="text" :options="editorOptions"></codemirror>
+  </div>
+</script>
+
+
 <script src="https://unpkg.com/vue"></script>
+
+<link rel="stylesheet" href="vendor/codemirror.css">
+<link rel="stylesheet" href="vendor/codemirror-theme-mbo.css">
+<script src="vendor/codemirror.js"></script>
+<script src="vendor/codemirror-mode.js"></script>
+<script src="vendor/codemirror-mode-css.js"></script>
+<script src="vendor/codemirror-mode-xml.js"></script>
+<script src="vendor/codemirror-mode-javascript.js"></script>
+<script src="vendor/codemirror-mode-htmlmixed.js"></script>
+<script src="vendor/codemirror-mode-vue.js"></script>
+<script src="vendor/vue-codemirror.js"></script>
+
 <script src="namesystem.js"></script>

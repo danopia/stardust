@@ -184,3 +184,6 @@ h3.form-row {
   border-color: #ccc;
   background-color: #444;
 }
+.cm-panel > .CodeMirror {
+  flex: 1;
+}

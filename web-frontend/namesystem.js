@@ -1,5 +1,10 @@
 const root = "/~~";
 
+// TODO
+window.require = function (names) {
+  console.log("'Requiring'", names)
+}
+
 Vue.component('entry-item', {
   template: '#entry-item',
   props: {
@@ -108,6 +113,47 @@ Vue.component('create-name', {
     activate: function () {
     },
   }
+});
+
+Vue.component('edit-file', {
+  template: '#edit-file',
+  props: {
+    tab: Object,
+  },
+  data: function () {
+    const pathParts = this.tab.path.split('/');
+    return {
+      text: '',
+      editorOptions: {
+        tabSize: 2,
+        mode: {
+          filename: pathParts[pathParts.length - 1],
+        },
+        styleActiveLine: true,
+        lineWrapping: true,
+        lineNumbers: true,
+        line: true,
+        styleSelectedText: true,
+        mode: 'text/html',
+        matchBrackets: true,
+        showCursorWhenSelecting: true,
+        theme: "mbo",
+        extraKeys: { "Ctrl": "autocomplete" },
+      }
+    };
+  },
+  computed: {
+  },
+  methods: {
+    activate: function () {
+    },
+  },
+  created() {
+    fetch(root + this.tab.path, {
+      headers: {Accept: 'text/plain'},
+    }).then(x => x.text())
+      .then(x => this.text = x);
+  },
 });
 
 var app = new Vue({
