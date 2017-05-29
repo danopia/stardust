@@ -136,7 +136,7 @@ Vue.component('edit-file', {
         styleSelectedText: true,
         matchBrackets: true,
         showCursorWhenSelecting: true,
-        theme: "mbo",
+        theme: "monokai",
         extraKeys: { "Ctrl": "autocomplete" },
       }
     };
