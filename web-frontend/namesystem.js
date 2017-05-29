@@ -4,6 +4,7 @@ Vue.component('entry-item', {
   template: '#entry-item',
   props: {
     name: String,
+    type: String,
     path: String,
     startOpen: Boolean,
   },
@@ -16,10 +17,10 @@ Vue.component('entry-item', {
   },
   computed: {
     isFolder: function () {
-      return this.entry.type === "Folder";
+      return this.type === "Folder";
     },
     icon: function () {
-      switch (this.entry.type) {
+      switch (this.type) {
         case "Folder":
           return this.open ? "folder_open" : "folder";
         case undefined: // TODO: unugly
@@ -31,18 +32,17 @@ Vue.component('entry-item', {
   },
   methods: {
     activate: function () {
-      this.load().then((entry) => {
-        if (entry.type === 'Folder') {
-          this.open = !this.open;
-        } else {
-          app.openEditor({
-            type: 'edit-' + entry.type.toLowerCase(),
-            label: this.name,
-            icon: 'edit',
-            path: this.path,
-          });
-        }
-      });
+      if (this.type === 'Folder') {
+        this.open = !this.open;
+        this.load();
+      } else {
+        app.openEditor({
+          type: 'edit-' + this.type.toLowerCase(),
+          label: this.name,
+          icon: 'edit',
+          path: this.path,
+        });
+      }
     },
     load: function () {
       if (!this.loader) {

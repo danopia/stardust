@@ -118,8 +118,27 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			names := entry.Children()
 			entries := make([]map[string]interface{}, len(names))
 			for idx, name := range names {
+
+				// Fetch child to identify type
+				subType := "Unknown"
+				if sub, ok := entry.Fetch(name); ok {
+					switch sub.(type) {
+					case base.Folder:
+						subType = "Folder"
+					case base.File:
+						subType = "File"
+					case base.String:
+						subType = "String"
+					case base.Function:
+						subType = "Function"
+					case base.Shape:
+						subType = "Shape"
+					}
+				}
+
 				entries[idx] = map[string]interface{}{
 					"name": name,
+					"type": subType,
 				}
 			}
 

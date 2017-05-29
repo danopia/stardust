@@ -10,6 +10,7 @@
       class="entry-item"
       name="sd://apt.danopia.net"
       :path="''"
+      :type="'Folder'"
       :start-open="true">
     </entry-item>
   </ul>
@@ -48,6 +49,7 @@
         v-for="child in entry.children"
         :key="child.name"
         :name="child.name"
+        :type="child.type"
         :path="path + '/' + child.name"
         :start-open="name === 'sd://apt.danopia.net'">
       </entry-item>
