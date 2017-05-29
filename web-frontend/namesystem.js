@@ -165,9 +165,9 @@ var app = new Vue({
     currentTab: null,
   },
   created() {
-    this.openEditor({"type":"edit-string","label":"init","icon":"edit","path":"/boot/init"});
+    //this.openEditor({"type":"edit-string","label":"init","icon":"edit","path":"/boot/init"});
     this.openEditor({"type":"edit-file","label":"namesystem.html","icon":"edit","path":"/n/osfs/namesystem.html"});
-    this.openEditor({"type":"create-name","label":"create (tmp)","icon":"add","path":"/tmp"});
+    //this.openEditor({"type":"create-name","label":"create (tmp)","icon":"add","path":"/tmp"});
   },
   methods: {
     // Focus or open a new editor for given details
