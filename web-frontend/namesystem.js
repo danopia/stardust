@@ -134,7 +134,6 @@ Vue.component('edit-file', {
         lineNumbers: true,
         line: true,
         styleSelectedText: true,
-        mode: 'text/html',
         matchBrackets: true,
         showCursorWhenSelecting: true,
         theme: "mbo",

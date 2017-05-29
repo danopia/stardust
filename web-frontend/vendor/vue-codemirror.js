@@ -77,6 +77,9 @@ Vue.component('codemirror', {
           language = null
         }
       }
+      // DANOPIA PATCH
+      this.options.mode = language
+      // END DANOPIA PATCH
     }
     if ((!language || language == 'null') && _debugger) {
       console.warn('CodeMirror language mode: ' + language + ' configuration error (CodeMirror语言模式配置错误，或者不支持此语言) See http://codemirror.net/mode/ for more details.')
