@@ -134,24 +134,53 @@ ul {
 }
 
 
-.form-panel {
-  padding: 1em;
+.panel-parent {
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #333;
 }
+.form-panel {
+  padding: 1em;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 30em;
+}
 .form-row {
-  display: block;
+  display: flex;
   margin: 0.5em 0;
+  align-items: center;
 }
 h3.form-row {
   margin: 0;
-  max-width: 20em;
   font-size: 2em;
   font-weight: normal;
   text-transform: lowercase;
   border-bottom: 2px solid #666;
   color: #999;
   margin-bottom: 1em;
+}
+.form-row span {
+  flex-basis: 5em;
+}
+.form-row [readonly] {
+  color: #999;
+}
+.form-row input, .form-row select, .form-row button {
+  padding: 0.5em 1em;
+  background-color: #222;
+  border: 1px solid #999;
+  border-radius: 3px;
+  font-size: 1.2em;
+  color: #eee;
+  flex: 1;
+}
+.form-row input, .form-row select {
+  margin-left: 1em;
+}
+.form-row:hover input, .form-row:hover select, .form-row button:hover {
+  box-shadow: 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  border-color: #ccc;
+  background-color: #444;
 }

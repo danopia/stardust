@@ -74,12 +74,13 @@
 </script>
 
 <script type="text/x-template" id="create-name">
+<div class="panel-parent">
   <form class="form-panel"
       @submit="submit">
     <h3 class="form-row">Create Entry</h3>
     <label class="form-row">
       <span>Parent:</span>
-      <code>{{tab.path}}</code>
+      <input type="text" name="parent" :value="tab.path" readonly>
     </label>
     <label class="form-row">
       <span>Name:</span>
@@ -97,6 +98,7 @@
       <button type="submit">Save</button>
     </div>
   </form>
+</div>
 </script>
 
 <script src="https://unpkg.com/vue"></script>
