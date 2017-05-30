@@ -167,6 +167,11 @@ var app = new Vue({
     //this.openEditor({"type":"edit-string","label":"init","icon":"edit","path":"/boot/init"});
     this.openEditor({"type":"edit-file","label":"namesystem.html","icon":"edit","path":"/n/osfs/namesystem.html"});
     //this.openEditor({"type":"create-name","label":"create (tmp)","icon":"add","path":"/tmp"});
+
+    window.addEventListener('keydown', this.handleKeyDown);
+  },
+  destroyed () {
+    window.removeEventListener('keydown', this.handleKeyDown);
   },
   methods: {
     // Focus or open a new editor for given details
@@ -197,6 +202,34 @@ var app = new Vue({
         this.currentTab = this.tabList[0];
         const idx = this.tabList.indexOf(this.currentTab);
       }
-    }
+    },
+
+    handleKeyDown(evt) {
+      switch (true) {
+
+      case evt.code === 'KeyS' && (evt.metaKey || evt.ctrlKey):
+        if (this.currentTab) {
+          evt.preventDefault();
+          console.log('Saving...', this.currentTab.label);
+          this.currentTab.save();
+        }
+        break;
+
+      case evt.code === 'KeyN' && evt.metaKey:
+        if (this.currentTab) {
+          evt.preventDefault();
+          const pathParts = this.currentTab.path.slice(1).split('/');
+          this.openEditor({
+            type: "create-name",
+            label: "create (" + pathParts[pathParts.length - 2] + ")",
+            icon: "add",
+            path: "/" + pathParts.slice(0, -1).join('/'),
+          });
+        }
+        break;
+
+      }
+    },
   },
+
 });
