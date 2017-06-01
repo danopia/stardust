@@ -120,10 +120,10 @@ Vue.component('edit-file', {
   props: {
     tab: Object,
   },
-  data: function () {
+  data() {
     const pathParts = this.tab.path.split('/');
     return {
-      text: '',
+      source: '',
       editorOptions: {
         tabSize: 2,
         mode: {
@@ -146,12 +146,25 @@ Vue.component('edit-file', {
   methods: {
     activate: function () {
     },
+    save() {
+      fetch(root + this.tab.path, {
+        method: 'PUT',
+        body: this.source,
+        headers: {
+          'X-SD-Entry-Type': 'File',
+          'Content-Type': 'text/plain',
+        },
+      }).then(x => x.text())
+        .then(x => alert('File Save Response:\n\n' + x));
+    },
   },
   created() {
     fetch(root + this.tab.path, {
-      headers: {Accept: 'text/plain'},
+      headers: {
+        Accept: 'text/plain',
+      },
     }).then(x => x.text())
-      .then(x => this.text = x);
+      .then(x => this.source = x);
   },
 });
 
@@ -205,20 +218,23 @@ var app = new Vue({
     },
 
     handleKeyDown(evt) {
+      const tab = (this.$refs.tabElems || [])
+        .find(elem => elem.tab.key === this.currentTab.key);
+
       switch (true) {
 
       case evt.code === 'KeyS' && (evt.metaKey || evt.ctrlKey):
-        if (this.currentTab) {
+        if (tab) {
           evt.preventDefault();
-          console.log('Saving...', this.currentTab.label);
-          this.currentTab.save();
+          console.log('Saving tab:', tab.tab.label);
+          tab.save();
         }
         break;
 
       case evt.code === 'KeyN' && evt.metaKey:
-        if (this.currentTab) {
+        if (tab) {
           evt.preventDefault();
-          const pathParts = this.currentTab.path.slice(1).split('/');
+          const pathParts = tab.tab.path.slice(1).split('/');
           this.openEditor({
             type: "create-name",
             label: "create (" + pathParts[pathParts.length - 2] + ")",

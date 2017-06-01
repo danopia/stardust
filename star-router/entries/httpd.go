@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -26,6 +28,7 @@ func getHttpdDriver() base.Folder {
 func httpdFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 	svc := &httpd{
 		root: input.(base.Folder),
+		ctx:  ctx,
 		//rayFunc:   input.(base.Function), // TODO
 		//tmpFolder: inmem.NewFolder("ray-ssh"),
 	}
@@ -38,6 +41,7 @@ func httpdFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 
 // Context for a running SSH server
 type httpd struct {
+	ctx  base.Context
 	root base.Folder
 	//rayFunc   base.Function
 	//tmpFolder base.Folder
@@ -53,6 +57,51 @@ func (e *httpd) listen() {
 
 func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// r.Method, r.URL, r.Proto, r.Header, r.Body, r.Host, r.Form, r.RemoteAddr
+
+	if r.Method == "PUT" {
+
+		// TODO: escape pieces?
+		entryPath, _ := url.PathUnescape(strings.TrimPrefix(r.RequestURI, "/~~"))
+		entryPath = strings.TrimSuffix(entryPath, "/")
+		entryName := path.Base(entryPath)
+
+		entryType := "File"
+		if accepts := r.Header["X-Sd-Entry-Type"]; len(accepts) > 0 {
+			entryType = accepts[0]
+		}
+
+		log.Println("HTTP PUT for", entryType, entryPath)
+		obj := map[string]interface{}{
+			"path": entryPath,
+			"name": entryName,
+			"type": entryType,
+		}
+		ok := false
+
+		switch entryType {
+		case "File":
+			body, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				panic(err)
+			}
+			ok = e.ctx.Put(entryPath, inmem.NewString(entryName, string(body)))
+
+		default:
+			http.Error(w, "Invalid entry type", http.StatusBadRequest)
+			return
+		}
+		obj["ok"] = ok
+
+		json, err := json.Marshal(obj)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("content-type", "application/json; charset=UTF-8")
+		w.Write([]byte(json))
+		return
+	}
 
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)

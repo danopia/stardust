@@ -33,7 +33,8 @@
         v-show="tab === currentTab"
         :key="tab.key"
         :is="tab.type"
-        :tab="tab"></component>
+        :tab="tab"
+        ref="tabElems"></component>
   </div>
 </div>
 
@@ -106,7 +107,7 @@
 
 <script type="text/x-template" id="edit-file">
   <div class="panel-parent cm-panel">
-    <codemirror :code="text" :options="editorOptions"></codemirror>
+    <codemirror v-model="source" :options="editorOptions"></codemirror>
   </div>
 </script>
 
