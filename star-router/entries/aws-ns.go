@@ -163,6 +163,43 @@ func (e *awsNsFolder) Fetch(name string) (entry base.Entry, ok bool) {
 }
 
 func (e *awsNsFolder) Put(name string, entry base.Entry) (ok bool) {
-	// TODO
-	return false
+	// TODO: check if it's already a name of same type??
+	params := &dynamodb.PutItemInput{
+		TableName: aws.String("Stardust_NameSystem"),
+
+		// Get the child directly
+		Item: map[string]*dynamodb.AttributeValue{
+			"ParentId": {S: aws.String(e.id)},
+			"Name":     {S: aws.String(name)},
+		},
+	}
+
+	switch entry := entry.(type) {
+
+	case base.Folder:
+		// easy enough
+		params.Item["Type"] = &dynamodb.AttributeValue{S: aws.String("Folder")}
+
+	case base.String:
+		params.Item["Type"] = &dynamodb.AttributeValue{S: aws.String("String")}
+		params.Item["Value"] = &dynamodb.AttributeValue{S: aws.String(entry.Get())}
+
+	case base.File:
+		// Get the byte buffer first
+		size := entry.GetSize()
+		data := entry.Read(0, int(size))
+
+		params.Item["Type"] = &dynamodb.AttributeValue{S: aws.String("File")}
+		params.Item["Value"] = &dynamodb.AttributeValue{B: data}
+
+	default:
+		return false
+	}
+
+	_, err := e.ns.svc.PutItem(params)
+	if err != nil {
+		log.Println("dynamodb put error:", err)
+		return false
+	}
+	return true
 }

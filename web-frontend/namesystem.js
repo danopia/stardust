@@ -88,13 +88,6 @@ Vue.component('create-entry-item', {
         path: this.parent,
       });
     },
-    /*create: function () {
-      this.requested = true;
-
-      fetch(this.path, {headers: {Accept: 'application/json'}})
-        .then(x => x.json())
-        .then(x => this.entry = x);
-    },*/
   }
 });
 
@@ -105,12 +98,45 @@ Vue.component('create-name', {
   },
   data: function () {
     return {
+      name: '',
+      type: 'File',
     };
   },
   computed: {
   },
   methods: {
-    activate: function () {
+    submit() {
+      if (!this.name.length) {
+        alert("Enter a name!");
+        return;
+      }
+      const fullPath = this.tab.path + '/' + this.name;
+
+      switch (this.type) {
+      case "File":
+        // Don't actually create yet, just open a buffer
+        app.openEditor({
+          type: "edit-file",
+          icon: "edit",
+          label: this.name,
+          path: fullPath,
+          isNew: true,
+        });
+        break;
+
+      case "Folder":
+        fetch(root + fullPath, {
+          method: 'PUT',
+          headers: {
+            'X-SD-Entry-Type': 'Folder',
+          },
+        }).then(x => x.text())
+          .then(x => alert('Folder Creation Response:\n\n' + x));
+        break;
+
+      default:
+        alert(`I don't know how to make a ${this.type} yet`)
+      }
     },
   }
 });
@@ -159,6 +185,10 @@ Vue.component('edit-file', {
     },
   },
   created() {
+    if (this.tab.isNew) {
+      return;
+    }
+
     fetch(root + this.tab.path, {
       headers: {
         Accept: 'text/plain',

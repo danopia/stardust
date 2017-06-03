@@ -79,12 +79,24 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ok := false
 
 		switch entryType {
-		case "File":
+		case "Folder":
+			// no body, easy enough
+			ok = e.ctx.Put(entryPath, inmem.NewFolder(entryName))
+
+		case "String":
+			// Basically a utf-8 file. TODO: accept text input only
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
 				panic(err)
 			}
 			ok = e.ctx.Put(entryPath, inmem.NewString(entryName, string(body)))
+
+		case "File":
+			body, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				panic(err)
+			}
+			ok = e.ctx.Put(entryPath, inmem.NewFile(entryName, body).Freeze())
 
 		default:
 			http.Error(w, "Invalid entry type", http.StatusBadRequest)

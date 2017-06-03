@@ -79,7 +79,7 @@
 <script type="text/x-template" id="create-name">
 <div class="panel-parent">
   <form class="form-panel"
-      @submit="submit">
+      @submit.prevent="submit">
     <h3 class="form-row">Create Entry</h3>
     <label class="form-row">
       <span>Parent:</span>
@@ -87,11 +87,11 @@
     </label>
     <label class="form-row">
       <span>Name:</span>
-      <input type="text" name="name" autofocus>
+      <input type="text" name="name" v-model="name" autofocus required>
     </label>
     <label class="form-row">
       <span>Type:</span>
-      <select name="type">
+      <select name="type" v-model="type">
         <option>String</option>
         <option>File</option>
         <option>Folder</option>

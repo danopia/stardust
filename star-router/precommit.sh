@@ -6,7 +6,8 @@ SumBefore=$(md5sum consul-backup.json | cut -f 1 -d ' ')
 DateBefore=$(jq '.date' -r < consul-backup.json)
 
 echo "--> Taking new consul backup"
-consul-kv-backup backup > consul-backup.json
+consul-kv-backup backup > consul-full-backup.json
+cp consul-full-backup.json consul-backup.json
 
 echo "    Redacting secrets from backup"
 
