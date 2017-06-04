@@ -137,7 +137,7 @@ func (e *awsNsFolder) Fetch(name string) (entry base.Entry, ok bool) {
 	}
 
 	if result.Item == nil {
-		log.Println("dynamodb ns key", e.id, name, "didn't exist")
+		// log.Println("dynamodb ns key", e.id, name, "didn't exist")
 		return nil, false
 	}
 
@@ -145,10 +145,18 @@ func (e *awsNsFolder) Fetch(name string) (entry base.Entry, ok bool) {
 	switch typeStr {
 
 	case "String":
-		return inmem.NewString(name, *result.Item["Value"].S), true
+		var value string
+		if att, ok := result.Item["Value"]; ok {
+			value = *att.S
+		}
+		return inmem.NewString(name, value), true
 
 	case "File":
-		return inmem.NewFile(name, result.Item["Value"].B).Freeze(), true
+		var data []byte
+		if att, ok := result.Item["Value"]; ok {
+			data = att.B
+		}
+		return inmem.NewFile(name, data), true
 
 	case "Folder":
 		return &awsNsFolder{
@@ -182,7 +190,9 @@ func (e *awsNsFolder) Put(name string, entry base.Entry) (ok bool) {
 
 	case base.String:
 		params.Item["Type"] = &dynamodb.AttributeValue{S: aws.String("String")}
-		params.Item["Value"] = &dynamodb.AttributeValue{S: aws.String(entry.Get())}
+		if value := entry.Get(); len(value) > 0 {
+			params.Item["Value"] = &dynamodb.AttributeValue{S: aws.String(value)}
+		}
 
 	case base.File:
 		// Get the byte buffer first
@@ -190,7 +200,9 @@ func (e *awsNsFolder) Put(name string, entry base.Entry) (ok bool) {
 		data := entry.Read(0, int(size))
 
 		params.Item["Type"] = &dynamodb.AttributeValue{S: aws.String("File")}
-		params.Item["Value"] = &dynamodb.AttributeValue{B: data}
+		if len(data) > 0 {
+			params.Item["Value"] = &dynamodb.AttributeValue{B: data}
+		}
 
 	default:
 		return false

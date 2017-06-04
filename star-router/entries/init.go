@@ -35,6 +35,8 @@ func initFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 
 	ctx.Put("/n/init", s)
 
+	s.start(s.services["aws-ns"])
+
 	for name, svc := range s.services {
 		if !svc.running {
 			log.Println("init: Starting service", name)
@@ -125,6 +127,7 @@ func (s *initSvc) start(svc *service) {
 			log.Println("Couldn't mount to", mountPath)
 			return
 		}
+		log.Println("Mounted to", mountPath)
 		//c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
 	}
 

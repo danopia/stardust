@@ -52,9 +52,25 @@ func (e *File) Read(offset int64, numBytes int) (data []byte) {
 	return
 }
 
+// from billy memory store
 func (e *File) Write(offset int64, data []byte) (numBytes int) {
-	// TODO
-	return 0
+	if !e.writable {
+		return 0
+	}
+
+	prev := len(e.data)
+
+	diff := int(offset) - prev
+	if diff > 0 {
+		e.data = append(e.data, make([]byte, diff)...)
+	}
+
+	e.data = append(e.data[:offset], data...)
+	if len(e.data) < prev {
+		e.data = e.data[:prev]
+	}
+
+	return len(data)
 }
 
 func (e *File) Truncate() (ok bool) {

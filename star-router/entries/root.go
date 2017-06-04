@@ -18,6 +18,7 @@ func NewRootEntry() *inmem.Folder {
 func newRomEntry() *inmem.Folder {
 	drivers := inmem.NewFolderOf("drv",
 		getOsDriver(),
+		getGitDriver(),
 		getAwsDriver(),
 		getAwsNsDriver(),
 		getConsulDriver(),
