@@ -58,6 +58,55 @@ func (e *httpd) listen() {
 func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// r.Method, r.URL, r.Proto, r.Header, r.Body, r.Host, r.Form, r.RemoteAddr
 
+	// function invocation
+	if r.Method == "POST" {
+
+		// TODO: escape pieces?
+		entryPath, _ := url.PathUnescape(strings.TrimPrefix(r.RequestURI, "/~~"))
+		entryPath = strings.TrimSuffix(entryPath, "/")
+
+		var inputPath, outputPath string
+		if list := r.Header["X-Sd-Input"]; len(list) > 0 {
+			inputPath = list[0]
+		}
+		if list := r.Header["X-Sd-Output"]; len(list) > 0 {
+			outputPath = list[0]
+		}
+
+		log.Println("HTTP POST invocation to", entryPath, "with", inputPath, "to", outputPath)
+
+		function, ok := e.ctx.GetFunction(entryPath) // TODO: /invoke (func shape)
+		if !ok {
+			http.Error(w, "Function not found", http.StatusNotFound)
+			return
+		}
+
+		var input base.Entry
+		if inputPath != "" {
+			input, ok = e.ctx.Get(inputPath)
+			if !ok {
+				http.Error(w, "Input not found", http.StatusNotFound)
+				return
+			}
+		}
+
+		output := function.Invoke(e.ctx, input)
+
+		if outputPath != "" && output != nil {
+			ok = e.ctx.Put(outputPath, output)
+			if !ok {
+				http.Error(w, "Output couldn't be written", http.StatusBadRequest)
+				return
+			}
+
+			//w.Header().Add("content-type", "application/json; charset=UTF-8")
+			w.WriteHeader(http.StatusCreated)
+		} else {
+			w.WriteHeader(http.StatusNoContent)
+		}
+		return
+	}
+
 	if r.Method == "PUT" {
 
 		// TODO: escape pieces?
