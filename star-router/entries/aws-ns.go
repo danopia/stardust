@@ -171,6 +171,39 @@ func (e *awsNsFolder) Fetch(name string) (entry base.Entry, ok bool) {
 }
 
 func (e *awsNsFolder) Put(name string, entry base.Entry) (ok bool) {
+	if entry == nil {
+		// oh boy this is a delete now
+		target, ok := e.Fetch(name)
+		if !ok { // already doesn't exist i guess
+			return true
+		}
+
+		if folder, ok := target.(base.Folder); ok {
+			// let's get recursive
+			for _, child := range folder.Children() {
+				folder.Put(child, nil)
+			}
+		}
+
+		// finally delete actual target
+		params := &dynamodb.DeleteItemInput{
+			TableName: aws.String("Stardust_NameSystem"),
+
+			// Get the child directly
+			Key: map[string]*dynamodb.AttributeValue{
+				"ParentId": {S: aws.String(e.id)},
+				"Name":     {S: aws.String(name)},
+			},
+		}
+
+		_, err := e.ns.svc.DeleteItem(params)
+		if err != nil {
+			log.Println("dynamodb put/delete error:", err)
+			return false
+		}
+		return true
+	}
+
 	// TODO: check if it's already a name of same type??
 	params := &dynamodb.PutItemInput{
 		TableName: aws.String("Stardust_NameSystem"),
