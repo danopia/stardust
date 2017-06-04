@@ -3,98 +3,117 @@ package entries
 import (
 	"log"
 
-  "gopkg.in/src-d/go-git.v4"
-  "gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"github.com/danopia/stardust/star-router/base"
-	//"github.com/danopia/stardust/star-router/helpers"
+	"github.com/danopia/stardust/star-router/helpers"
 	"github.com/danopia/stardust/star-router/inmem"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
 // Directory containing the clone function
 func getGitDriver() *inmem.Folder {
 	return inmem.NewFolderOf("git",
 
-  	inmem.NewFolderOf("clone",
-  		inmem.NewFunction("invoke", gitClone),
-  		//inmem.NewLink("input-shape", "/rom/shapes/git-opts"),
-  	).Freeze(),
+		inmem.NewFolderOf("clone",
+			inmem.NewFunction("invoke", gitClone),
+			//inmem.NewLink("input-shape", "/rom/shapes/git-opts"),
+		).Freeze(),
 
-  	inmem.NewFolderOf("init",
-  		inmem.NewFunction("invoke", gitInit),
-  		//inmem.NewLink("input-shape", "/rom/shapes/git-opts"),
-  	).Freeze(),
+		inmem.NewFolderOf("init",
+			inmem.NewFunction("invoke", gitInit),
+			//inmem.NewLink("input-shape", "/rom/shapes/git-opts"),
+		).Freeze(),
 
-  	inmem.NewFolderOf("open",
-  		inmem.NewFunction("invoke", gitOpen),
-  		//inmem.NewLink("input-shape", "/rom/shapes/git-opts"),
-  	).Freeze(),
+		inmem.NewFolderOf("open",
+			inmem.NewFunction("invoke", gitOpen),
+			//inmem.NewLink("input-shape", "/rom/shapes/git-opts"),
+		).Freeze(),
+	).Freeze()
+}
 
-  ).Freeze()
+func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *billyAdapter) {
+	inputFolder := input.(base.Folder)
+	workingPath, _ := helpers.GetChildString(inputFolder, "working-path")
+	repoPath, _ := helpers.GetChildString(inputFolder, "repo-path")
+	if repoPath == "" {
+		repoPath = workingPath + "/.git"
+	}
+
+	repoTree := newBillyAdapter(ctx, repoPath)
+	workTree := newBillyAdapter(ctx, workingPath)
+
+	repoStore, err := filesystem.NewStorage(repoTree)
+	if err != nil {
+		log.Println("[git] clone storage problem:", err)
+		return repoStore, nil
+	}
+
+	return repoStore, workTree
 }
 
 func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
-  repoTree := &billyAdapter{ctx, "/n/aws-ns/app-suite.git"}
-  workTree := &billyAdapter{ctx, "/n/aws-ns/app-suite"}
+	inputFolder := input.(base.Folder)
+	originUri, _ := helpers.GetChildString(inputFolder, "origin-uri")
+	repoPath, _ := helpers.GetChildString(inputFolder, "repo-path")
+	//idempotent, _ := helpers.GetChildString(inputFolder, "idempotent")
 
-  repoStore, err := filesystem.NewStorage(repoTree)
-  if err != nil {
-    log.Println("[git] clone storage problem:", err)
-    return nil
-  }
+	// delete the target
+	ctx.Put(repoPath, nil)
+	ctx.Put(repoPath, inmem.NewFolder("git"))
+
+	repoStore, workTree := inflateGitInput(ctx, input)
+	if repoStore == nil || workTree == nil {
+		log.Println("[git] clone storage problem:")
+		return nil
+	}
 
 	repo, err := git.Clone(repoStore, workTree, &git.CloneOptions{
-    URL: "https://github.com/stardustapp/app-suite",
-  })
-  if err != nil {
-    log.Println("[git] clone problem:", err)
-    return nil
-  }
+		URL: originUri,
+	})
+	if err != nil {
+		log.Println("[git] clone problem:", err)
+		return nil
+	}
 
-  return &gitApi{
-    repo: repo,
-  }
+	return &gitApi{
+		repo: repo,
+	}
 }
 
 func gitInit(ctx base.Context, input base.Entry) (output base.Entry) {
-  repoTree := &billyAdapter{ctx, "/n/aws-ns/app-suite.git"}
-  workTree := &billyAdapter{ctx, "/n/aws-ns/app-suite"}
-
-  repoStore, err := filesystem.NewStorage(repoTree)
-  if err != nil {
-    log.Println("[git] init storage problem:", err)
-    return nil
-  }
+	repoStore, workTree := inflateGitInput(ctx, input)
+	if repoStore == nil || workTree == nil {
+		log.Println("[git] init storage problem:")
+		return nil
+	}
 
 	repo, err := git.Init(repoStore, workTree)
-  if err != nil {
-    log.Println("[git] init problem:", err)
-    return nil
-  }
+	if err != nil {
+		log.Println("[git] init problem:", err)
+		return nil
+	}
 
-  return &gitApi{
-    repo: repo,
-  }
+	return &gitApi{
+		repo: repo,
+	}
 }
 
 func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
-  repoTree := &billyAdapter{ctx, "/n/aws-ns/app-suite.git"}
-  workTree := &billyAdapter{ctx, "/n/aws-ns/app-suite"}
-
-  repoStore, err := filesystem.NewStorage(repoTree)
-  if err != nil {
-    log.Println("[git] open storage problem:", err)
-    return nil
-  }
+	repoStore, workTree := inflateGitInput(ctx, input)
+	if repoStore == nil || workTree == nil {
+		log.Println("[git] open storage problem:")
+		return nil
+	}
 
 	repo, err := git.Open(repoStore, workTree)
-  if err != nil {
-    log.Println("[git] open problem:", err)
-    return nil
-  }
+	if err != nil {
+		log.Println("[git] open problem:", err)
+		return nil
+	}
 
-  return &gitApi{
-    repo: repo,
-  }
+	return &gitApi{
+		repo: repo,
+	}
 }
 
 // Combines a working tree with a git repo
@@ -128,7 +147,6 @@ func (e *gitApi) Put(name string, entry base.Entry) (ok bool) {
 	return false
 }
 
-
 type gitStatusFunc struct {
 	repo *git.Repository
 }
@@ -140,6 +158,6 @@ func (e *gitStatusFunc) Name() string {
 }
 
 func (e *gitStatusFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-  // TODO
-  return nil
+	// TODO
+	return nil
 }
