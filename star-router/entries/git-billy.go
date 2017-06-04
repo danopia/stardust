@@ -88,7 +88,7 @@ func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (bi
 }
 func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 	log.Println("[billy] stat", filename)
-	if entry, ok := a.ctx.Get(a.prefix + "/" + filename); ok {
+	if entry, ok := a.ctx.Get(a.prefix + "/" + strings.TrimPrefix(filename, "/")); ok {
 		return &billyFileInfo{entry}, nil
 	} else {
 		return nil, os.ErrNotExist
@@ -96,7 +96,12 @@ func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 }
 func (a *billyAdapter) ReadDir(path string) ([]billy.FileInfo, error) {
 	log.Println("[billy] readdir", path)
-	if folder, ok := a.ctx.GetFolder(a.prefix + "/" + path); ok {
+	dirPath := a.prefix
+	if len(path) > 0 {
+		dirPath += "/" + path
+	}
+
+	if folder, ok := a.ctx.GetFolder(dirPath); ok {
 		children := folder.Children()
 		stats := make([]billy.FileInfo, len(children))
 		for i, name := range children {
@@ -199,17 +204,18 @@ func (f *billyFileInfo) Name() string {
 	return f.entry.Name()
 }
 func (f *billyFileInfo) Size() int64 {
-	log.Println("[billy fileinfo] size", f.entry.Name())
 	if file, ok := f.entry.(base.File); ok {
-		return file.GetSize()
+		size := file.GetSize()
+		log.Println("[billy fileinfo] size", f.entry.Name(), size)
+		return size
 	}
 	return -1
 }
 func (f *billyFileInfo) Mode() os.FileMode {
-	var mode os.FileMode = 0777
+	var mode os.FileMode = 0664
 
 	if _, ok := f.entry.(base.Folder); ok {
-		mode = mode | os.ModeDir
+		mode = mode | os.ModeDir | 0111
 	}
 
 	if _, ok := f.entry.(base.Link); ok {
@@ -225,8 +231,8 @@ func (f *billyFileInfo) ModTime() time.Time {
 	return time.Unix(0, 0)
 }
 func (f *billyFileInfo) IsDir() bool {
-	log.Println("[billy fileinfo] isdir", f.entry.Name())
 	_, ok := f.entry.(base.Folder)
+	log.Println("[billy fileinfo] isdir", f.entry.Name(), ok)
 	return ok
 }
 func (f *billyFileInfo) Sys() interface{} {
@@ -254,7 +260,7 @@ func (f *billyFile) IsClosed() bool {
 }
 
 func (f *billyFile) Write(p []byte) (n int, err error) {
-	log.Println("[billy file] write", f.file.Name(), len(p))
+	//log.Println("[billy file] write", f.file.Name(), len(p))
 	n = f.file.Write(f.offset, p)
 	f.dirty = true
 	if n < len(p) {
@@ -269,7 +275,7 @@ func (f *billyFile) Read(p []byte) (n int, err error) {
 	bytes := f.file.Read(f.offset, len(p))
 	copy(p, bytes)
 	n = len(bytes)
-	log.Println("[billy file] read", f.file.Name(), len(p), n)
+	//log.Println("[billy file] read", f.file.Name(), f.offset, len(p), n)
 	if n < len(p) {
 		err = io.EOF
 	}
@@ -278,7 +284,7 @@ func (f *billyFile) Read(p []byte) (n int, err error) {
 }
 
 func (f *billyFile) Seek(offset int64, whence int) (n int64, err error) {
-	log.Println("[billy file] seek", f.file.Name(), offset, whence)
+	//log.Println("[billy file] seek", f.file.Name(), offset, whence)
 	size := f.file.GetSize()
 	switch whence {
 
