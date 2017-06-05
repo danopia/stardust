@@ -107,6 +107,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// entry creation/updating
 	if r.Method == "PUT" {
 
 		// TODO: escape pieces?
@@ -161,6 +162,23 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Add("content-type", "application/json; charset=UTF-8")
 		w.Write([]byte(json))
+		return
+	}
+
+	// entry deletion
+	if r.Method == "DELETE" {
+
+		// TODO: escape pieces?
+		entryPath, _ := url.PathUnescape(strings.TrimPrefix(r.RequestURI, "/~~"))
+		entryPath = strings.TrimSuffix(entryPath, "/")
+
+		log.Println("HTTP DELETE for", entryPath)
+
+		if ok := e.ctx.Put(entryPath, nil); ok {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			http.Error(w, "Couldn't nil that name", http.StatusBadRequest)
+		}
 		return
 	}
 
