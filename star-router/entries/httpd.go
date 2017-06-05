@@ -225,13 +225,24 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// normally we'd redirect to keep HTML relative links working
 			// but the JSON clients should know what to do
 
+			var shapeList []base.Shape
+			if shapePaths := r.Header["X-Sd-Match-Shape"]; len(shapePaths) > 0 {
+				for _, path := range shapePaths {
+					if shape, ok := e.ctx.GetShape(path); ok {
+						shapeList = append(shapeList, shape)
+					}
+				}
+			}
+			log.Println("matching against", len(shapeList), "shapes in directory")
+
 			names := entry.Children()
 			entries := make([]map[string]interface{}, len(names))
 			for idx, name := range names {
 
 				// Fetch child to identify type
 				subType := "Unknown"
-				if sub, ok := entry.Fetch(name); ok {
+				sub, ok := entry.Fetch(name)
+				if ok {
 					switch sub.(type) {
 					case base.Folder:
 						subType = "Folder"
@@ -246,9 +257,17 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
+				var shapes []string
+				for _, shape := range shapeList {
+					if shape.Check(e.ctx, sub) {
+						shapes = append(shapes, shape.Name())
+					}
+				}
+
 				entries[idx] = map[string]interface{}{
-					"name": name,
-					"type": subType,
+					"name":   name,
+					"type":   subType,
+					"shapes": shapes,
 				}
 			}
 

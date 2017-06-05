@@ -10,6 +10,11 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
+var stringOutputShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("output-shape",
+		inmem.NewString("type", "String"),
+	))
+
 // Directory containing the clone function
 func getGitDriver() *inmem.Folder {
 	return inmem.NewFolderOf("git",
@@ -129,14 +134,25 @@ func (e *gitApi) Name() string {
 }
 
 func (e *gitApi) Children() []string {
-	return []string{"status"}
+	return []string{"status", "add"}
 }
 
 func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
 	switch name {
 
 	case "status":
-		return &gitStatusFunc{e.repo}, true
+		return inmem.NewFolderOf("status",
+			&gitStatusFunc{e.repo},
+			gitStatusShape,
+			stringOutputShape,
+		).Freeze(), true
+
+	case "add":
+		return inmem.NewFolderOf("add",
+			&gitAddFunc{e.repo},
+			gitAddShape,
+			stringOutputShape,
+		).Freeze(), true
 
 	default:
 		return
@@ -147,6 +163,12 @@ func (e *gitApi) Put(name string, entry base.Entry) (ok bool) {
 	return false
 }
 
+var gitStatusShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props"),
+	))
+
 type gitStatusFunc struct {
 	repo *git.Repository
 }
@@ -154,10 +176,54 @@ type gitStatusFunc struct {
 var _ base.Function = (*gitStatusFunc)(nil)
 
 func (e *gitStatusFunc) Name() string {
-	return "status"
+	return "invoke"
 }
 
 func (e *gitStatusFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	// TODO
-	return nil
+	w, err := e.repo.Worktree()
+	if err != nil {
+		panic(err)
+	}
+
+	status, err := w.Status()
+	if err != nil {
+		panic(err)
+	}
+
+	return inmem.NewString("status", status.String())
+}
+
+var gitAddShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("path", "String"),
+		),
+	))
+
+type gitAddFunc struct {
+	repo *git.Repository
+}
+
+var _ base.Function = (*gitAddFunc)(nil)
+
+func (e *gitAddFunc) Name() string {
+	return "invoke"
+}
+
+func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	w, err := e.repo.Worktree()
+	if err != nil {
+		panic(err)
+	}
+
+	inputFolder := input.(base.Folder)
+	path, _ := helpers.GetChildString(inputFolder, "path")
+
+	hash, err := w.Add(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return inmem.NewString("hash", hash.String())
 }

@@ -88,7 +88,7 @@ func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (bi
 }
 func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 	log.Println("[billy] stat", filename)
-	if entry, ok := a.ctx.Get(a.prefix + "/" + strings.TrimPrefix(filename, "/")); ok {
+	if entry, ok := a.ctx.Get(a.prefix + strings.TrimSuffix("/"+strings.TrimPrefix(filename, "/"), "/")); ok {
 		return &billyFileInfo{entry}, nil
 	} else {
 		return nil, os.ErrNotExist

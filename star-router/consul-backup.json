@@ -1,5 +1,5 @@
 {
-  "date": "2017-06-04T12:48:55.510789009-07:00",
+  "date": "2017-06-04T15:14:00.746456736-07:00",
   "connection_info": {
     "host": "http://127.0.0.1:8500"
   },
@@ -16,7 +16,7 @@
     "services/app-suite-git/input/repo-path": "/n/aws-ns/app-suite.git",
     "services/app-suite-git/input/working-path": "/n/aws-ns/app-suite",
     "services/app-suite-git/mount-path": "/n/apps-git",
-    "services/app-suite-git/path": "/rom/drv/git/init",
+    "services/app-suite-git/path": "/rom/drv/git/open",
     "services/aws-client/input-path": "/boot/cfg/aws-creds",
     "services/aws-client/mount-path": "/n/aws",
     "services/aws-client/path": "/rom/drv/aws",
