@@ -159,7 +159,12 @@ func (e *gitApi) Name() string {
 }
 
 func (e *gitApi) Children() []string {
-	return []string{"status", "add", "commit"}
+	return []string{
+		"status",
+		"add",
+		"commit",
+		"push",
+	}
 }
 
 func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
@@ -183,6 +188,13 @@ func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
 		return inmem.NewFolderOf("commit",
 			&gitCommitFunc{e.worktree},
 			gitCommitShape,
+			stringOutputShape,
+		).Freeze(), true
+
+	case "push":
+		return inmem.NewFolderOf("push",
+			&gitPushFunc{e.repo},
+			gitPushShape,
 			stringOutputShape,
 		).Freeze(), true
 
@@ -308,4 +320,42 @@ func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.
 	}
 
 	return inmem.NewString("commit-hash", hash.String())
+}
+
+var gitPushShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewFolderOf("remote-name",
+				inmem.NewString("type", "String"),
+				inmem.NewString("optional", "yes"),
+			),
+			//inmem.NewString("remote-name", "String"),
+			// TODO: list of refspec strings
+		),
+	))
+
+type gitPushFunc struct {
+	repo *git.Repository
+}
+
+var _ base.Function = (*gitPushFunc)(nil)
+
+func (e *gitPushFunc) Name() string {
+	return "invoke"
+}
+
+func (e *gitPushFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	inputFolder := input.(base.Folder)
+	remoteName, _ := helpers.GetChildString(inputFolder, "remote-name")
+
+	// https doesn't have push yet
+	err := e.repo.Push(&git.PushOptions{
+		RemoteName: remoteName,
+	})
+	if err != nil {
+		log.Println("git push:", err)
+		return inmem.NewString("error", err.Error())
+	}
+	return inmem.NewString("result", "ok")
 }
