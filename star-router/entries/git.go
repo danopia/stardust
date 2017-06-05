@@ -2,6 +2,7 @@ package entries
 
 import (
 	"log"
+	"os"
 
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/helpers"
@@ -219,6 +220,16 @@ func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Ent
 
 	inputFolder := input.(base.Folder)
 	path, _ := helpers.GetChildString(inputFolder, "path")
+
+	defer func() {
+		if r := recover(); r != nil {
+			if r != os.ErrNotExist {
+				panic(r)
+			}
+			log.Println("git add on missing file", path)
+			output = nil
+		}
+	}()
 
 	hash, err := w.Add(path)
 	if err != nil {
