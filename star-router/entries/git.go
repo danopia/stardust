@@ -3,11 +3,13 @@ package entries
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/danopia/stardust/star-router/base"
 	"github.com/danopia/stardust/star-router/helpers"
 	"github.com/danopia/stardust/star-router/inmem"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
@@ -81,8 +83,15 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 		return nil
 	}
 
+	worktree, err := repo.Worktree()
+	if err != nil {
+		log.Println("[git] worktree problem:", err)
+		return nil
+	}
+
 	return &gitApi{
-		repo: repo,
+		repo:     repo,
+		worktree: worktree,
 	}
 }
 
@@ -99,8 +108,15 @@ func gitInit(ctx base.Context, input base.Entry) (output base.Entry) {
 		return nil
 	}
 
+	worktree, err := repo.Worktree()
+	if err != nil {
+		log.Println("[git] worktree problem:", err)
+		return nil
+	}
+
 	return &gitApi{
-		repo: repo,
+		repo:     repo,
+		worktree: worktree,
 	}
 }
 
@@ -117,15 +133,23 @@ func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
 		return nil
 	}
 
+	worktree, err := repo.Worktree()
+	if err != nil {
+		log.Println("[git] worktree problem:", err)
+		return nil
+	}
+
 	return &gitApi{
-		repo: repo,
+		repo:     repo,
+		worktree: worktree,
 	}
 }
 
 // Combines a working tree with a git repo
 // Presents a set of APIs to invoke Git functionality
 type gitApi struct {
-	repo *git.Repository
+	repo     *git.Repository
+	worktree *git.Worktree
 }
 
 var _ base.Folder = (*gitApi)(nil)
@@ -135,7 +159,7 @@ func (e *gitApi) Name() string {
 }
 
 func (e *gitApi) Children() []string {
-	return []string{"status", "add"}
+	return []string{"status", "add", "commit"}
 }
 
 func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
@@ -143,15 +167,22 @@ func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
 
 	case "status":
 		return inmem.NewFolderOf("status",
-			&gitStatusFunc{e.repo},
+			&gitStatusFunc{e.worktree},
 			gitStatusShape,
 			stringOutputShape,
 		).Freeze(), true
 
 	case "add":
 		return inmem.NewFolderOf("add",
-			&gitAddFunc{e.repo},
+			&gitAddFunc{e.worktree},
 			gitAddShape,
+			stringOutputShape,
+		).Freeze(), true
+
+	case "commit":
+		return inmem.NewFolderOf("commit",
+			&gitCommitFunc{e.worktree},
+			gitCommitShape,
 			stringOutputShape,
 		).Freeze(), true
 
@@ -171,7 +202,7 @@ var gitStatusShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitStatusFunc struct {
-	repo *git.Repository
+	worktree *git.Worktree
 }
 
 var _ base.Function = (*gitStatusFunc)(nil)
@@ -181,12 +212,7 @@ func (e *gitStatusFunc) Name() string {
 }
 
 func (e *gitStatusFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	w, err := e.repo.Worktree()
-	if err != nil {
-		panic(err)
-	}
-
-	status, err := w.Status()
+	status, err := e.worktree.Status()
 	if err != nil {
 		panic(err)
 	}
@@ -203,7 +229,7 @@ var gitAddShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitAddFunc struct {
-	repo *git.Repository
+	worktree *git.Worktree
 }
 
 var _ base.Function = (*gitAddFunc)(nil)
@@ -213,11 +239,6 @@ func (e *gitAddFunc) Name() string {
 }
 
 func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	w, err := e.repo.Worktree()
-	if err != nil {
-		panic(err)
-	}
-
 	inputFolder := input.(base.Folder)
 	path, _ := helpers.GetChildString(inputFolder, "path")
 
@@ -231,10 +252,60 @@ func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Ent
 		}
 	}()
 
-	hash, err := w.Add(path)
+	hash, err := e.worktree.Add(path)
 	if err != nil {
 		panic(err)
 	}
 
 	return inmem.NewString("hash", hash.String())
+}
+
+var gitCommitShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("message", "String"),
+			inmem.NewString("author-name", "String"),
+			inmem.NewString("author-email", "String"),
+			inmem.NewFolderOf("all",
+				inmem.NewString("type", "String"),
+				inmem.NewString("optional", "yes"),
+			),
+		),
+	))
+
+type gitCommitFunc struct {
+	worktree *git.Worktree
+}
+
+var _ base.Function = (*gitCommitFunc)(nil)
+
+func (e *gitCommitFunc) Name() string {
+	return "invoke"
+}
+
+func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	inputFolder := input.(base.Folder)
+	message, _ := helpers.GetChildString(inputFolder, "message")
+	authorName, _ := helpers.GetChildString(inputFolder, "author-name")
+	authorEmail, _ := helpers.GetChildString(inputFolder, "author-email")
+	allStr, _ := helpers.GetChildString(inputFolder, "all")
+	all := allStr == "yes"
+
+	author := &object.Signature{
+		Name:  authorName,
+		Email: authorEmail,
+		When:  time.Now(),
+	}
+
+	hash, err := e.worktree.Commit(message, &git.CommitOptions{
+		All:       all,
+		Author:    author,
+		Committer: author,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return inmem.NewString("commit-hash", hash.String())
 }

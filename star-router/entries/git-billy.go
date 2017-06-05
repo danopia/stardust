@@ -126,6 +126,12 @@ func (a *billyAdapter) TempFile(dir, prefix string) (billy.File, error) {
 
 func (a *billyAdapter) Rename(from, to string) error {
 	log.Println("[billy] rename", from, to)
+
+	// TODO: include dirmode?
+	if err := a.MkdirAll(path.Dir(to), 0666); err != nil {
+		return err
+	}
+
 	if tmp, ok := a.tempFiles[from]; ok {
 		// commits the tempfile then deletes from ram
 		if ok := a.ctx.Put(a.prefix+"/"+to, tmp); ok {
