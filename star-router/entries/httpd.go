@@ -229,6 +229,9 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch entry := entry.(type) {
 
+		case base.File:
+			obj["type"] = "File"
+
 		case base.String:
 			obj["type"] = "String"
 			obj["value"] = entry.Get()

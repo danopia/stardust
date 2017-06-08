@@ -1,6 +1,8 @@
 package inmem
 
 import (
+	"sync"
+
 	"github.com/danopia/stardust/star-router/base"
 )
 
@@ -8,9 +10,10 @@ import (
 // Directories are mutable by default
 // Freeze() burns the writable fuse, then the contents are fixed forever
 type Folder struct {
-	name     string
-	writable bool
-	children map[string]base.Entry
+	name       string
+	writable   bool
+	children   map[string]base.Entry
+	childMutex sync.RWMutex
 }
 
 var _ base.Folder = (*Folder)(nil)
@@ -48,6 +51,9 @@ func (e *Folder) Name() string {
 }
 
 func (e *Folder) Children() []string {
+	e.childMutex.RLock()
+	defer e.childMutex.RUnlock()
+
 	names := make([]string, len(e.children))
 	i := 0
 	for k := range e.children {
@@ -58,12 +64,18 @@ func (e *Folder) Children() []string {
 }
 
 func (e *Folder) Fetch(name string) (entry base.Entry, ok bool) {
+	e.childMutex.RLock()
+	defer e.childMutex.RUnlock()
+
 	entry, ok = e.children[name]
 	return
 }
 
 func (e *Folder) Put(name string, entry base.Entry) (ok bool) {
 	if e.writable {
+		e.childMutex.Lock()
+		defer e.childMutex.Unlock()
+
 		if entry == nil {
 			delete(e.children, name)
 		} else {
