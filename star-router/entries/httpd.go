@@ -107,6 +107,43 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// webDAV method to relocate a resource
+	if r.Method == "MOVE" {
+
+		// TODO: escape pieces?
+		entryPath, _ := url.PathUnescape(strings.TrimPrefix(r.RequestURI, "/~~"))
+		entryPath = strings.TrimSuffix(entryPath, "/")
+
+		var destPath string
+		if list := r.Header["Destination"]; len(list) > 0 {
+			destPath = list[0]
+		}
+
+		log.Println("HTTP MOVE invocation for", entryPath, "to", destPath)
+
+		entry, ok := e.ctx.Get(entryPath)
+		if !ok {
+			http.Error(w, "Source entry not found", http.StatusNotFound)
+			return
+		}
+
+		ok = e.ctx.Put(destPath, entry)
+		if !ok {
+			http.Error(w, "Destination couldn't be written", http.StatusBadRequest)
+			return
+		}
+
+		ok = e.ctx.Put(entryPath, nil)
+		if !ok {
+			// Now we're in a corrupt state. Sorry.
+			http.Error(w, "Source couldn't be cleared", http.StatusBadRequest)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	// entry creation/updating
 	if r.Method == "PUT" {
 
