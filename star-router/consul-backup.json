@@ -1,5 +1,5 @@
 {
-  "date": "2017-06-10T14:00:01.353978822-07:00",
+  "date": "2017-06-10T14:50:45.554972359-07:00",
   "connection_info": {
     "host": "http://127.0.0.1:8500"
   },
@@ -12,7 +12,7 @@
     "init-script": "echo \"Starting up...\"\ninvoke /rom/drv/aws/clone /boot/cfg/aws-creds /n/aws\ninvoke /rom/bin/ray-ssh /rom/bin/ray /n/ray-ssh\ninvoke /n/aws/sqs/receive-message /boot/cfg/aws-github-queue /tmp/message\n: cat /tmp/message/body\necho \"Done booting service\"",
     "services/app-suite-git/": "",
     "services/app-suite-git/input/": "",
-    "services/app-suite-git/input/origin-uri": "https://github.com/stardustapp/app-suite",
+    "services/app-suite-git/input/origin-uri": "git@github.com:stardustapp/app-suite.git",
     "services/app-suite-git/input/repo-path": "/tmp/app-suite.git",
     "services/app-suite-git/input/working-path": "/n/aws-ns/app-suite",
     "services/app-suite-git/mount-path": "/n/apps-git",
