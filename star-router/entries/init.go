@@ -95,6 +95,7 @@ func (s *initSvc) start(svc *service) {
 
 	default:
 		log.Println("init:", runPath, "is not executable")
+		return
 
 	}
 

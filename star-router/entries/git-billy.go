@@ -41,7 +41,14 @@ func (a *billyAdapter) Create(filename string) (billy.File, error) {
 		return nil, err
 	}
 
-	ok := a.ctx.Put(a.prefix+"/"+filename, inmem.NewFile(path.Base(filename), nil))
+	var ok bool
+	if strings.HasSuffix(filename, ".string") {
+		filename2 := strings.TrimSuffix(filename, ".string")
+		ok = a.ctx.Put(a.prefix+"/"+filename2, inmem.NewString(path.Base(filename2), ""))
+	} else {
+		ok = a.ctx.Put(a.prefix+"/"+filename, inmem.NewFile(path.Base(filename), nil))
+	}
+
 	if !ok {
 		log.Println("billy create:", filename, "couldn't be made")
 		return nil, os.ErrNotExist
@@ -50,6 +57,21 @@ func (a *billyAdapter) Create(filename string) (billy.File, error) {
 }
 func (a *billyAdapter) Open(filename string) (billy.File, error) {
 	log.Println("[billy] open", filename)
+
+	if strings.HasSuffix(filename, ".string") {
+		filename = strings.TrimSuffix(filename, ".string")
+		if entry, ok := a.ctx.GetString(a.prefix + "/" + filename); ok {
+			return &billyString{
+				ctx:      a.ctx,
+				path:     a.prefix + "/" + filename,
+				filename: filename + ".string",
+				str:      entry,
+			}, nil
+		} else {
+			return nil, os.ErrNotExist
+		}
+	}
+
 	if tempFile, ok := a.tempFiles[filename]; ok {
 		return &billyFile{
 			ctx:      a.ctx,
@@ -70,10 +92,21 @@ func (a *billyAdapter) Open(filename string) (billy.File, error) {
 }
 func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (billy.File, error) {
 	log.Println("[billy] openfile", filename, flag, perm)
+
 	if flag == 577 { // writeonly, truncate, create
 		// TODO: include dirmode?
 		if err := a.MkdirAll(path.Dir(filename), perm); err != nil {
 			return nil, err
+		}
+
+		if strings.HasSuffix(filename, ".string") {
+			filename = strings.TrimSuffix(filename, ".string")
+			return &billyString{
+				ctx:      a.ctx,
+				path:     a.prefix + "/" + filename,
+				filename: filename + ".string",
+				str:      inmem.NewString(path.Base(filename), ""),
+			}, nil
 		}
 
 		return &billyFile{
@@ -86,10 +119,17 @@ func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (bi
 		return nil, billy.ErrNotSupported
 	}
 }
+
 func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 	log.Println("[billy] stat", filename)
-	if entry, ok := a.ctx.Get(a.prefix + strings.TrimSuffix("/"+strings.TrimPrefix(filename, "/"), "/")); ok {
-		return &billyFileInfo{entry}, nil
+	filename2 := filename
+	if strings.HasSuffix(filename, ".string") {
+		filename2 = strings.TrimSuffix(filename, ".string")
+	}
+
+	realName := strings.TrimSuffix("/"+strings.TrimPrefix(filename2, "/"), "/")
+	if entry, ok := a.ctx.Get(a.prefix + realName); ok {
+		return &billyFileInfo{entry, path.Base(filename)}, nil
 	} else {
 		return nil, os.ErrNotExist
 	}
@@ -105,7 +145,13 @@ func (a *billyAdapter) ReadDir(path string) ([]billy.FileInfo, error) {
 		children := folder.Children()
 		stats := make([]billy.FileInfo, len(children))
 		for i, name := range children {
-			stats[i], _ = a.Stat(path + "/" + name)
+			child, _ := folder.Fetch(name)
+			suffix := ""
+			if _, ok := child.(base.String); ok {
+				suffix = ".string"
+			}
+
+			stats[i], _ = a.Stat(path + "/" + name + suffix)
 		}
 		return stats, nil
 	} else {
@@ -203,17 +249,22 @@ func (a *billyAdapter) Base() string {
 
 type billyFileInfo struct {
 	entry base.Entry
+	name  string
 }
 
 func (f *billyFileInfo) Name() string {
 	log.Println("[billy fileinfo] name", f.entry.Name())
-	return f.entry.Name()
+	return f.name
 }
 func (f *billyFileInfo) Size() int64 {
 	if file, ok := f.entry.(base.File); ok {
 		size := file.GetSize()
 		log.Println("[billy fileinfo] size", f.entry.Name(), size)
 		return size
+	} else if str, ok := f.entry.(base.String); ok {
+		size := len(str.Get())
+		log.Println("[billy fileinfo] str size", f.entry.Name(), size)
+		return int64(size)
 	}
 	return -1
 }
@@ -327,4 +378,56 @@ func (f *billyFile) Close() error {
 	} else {
 		return billy.ErrNotSupported
 	}
+}
+
+type billyString struct {
+	ctx      base.Context
+	path     string // rooted in ctx
+	filename string // rooted in billy root
+	str      base.String
+}
+
+func (f *billyString) Filename() string {
+	log.Println("[billy string] filename", f.str.Name())
+	return f.filename
+}
+
+func (f *billyString) IsClosed() bool {
+	log.Println("[billy string] isclosed", f.str.Name())
+	return false // TODO
+}
+
+func (f *billyString) Write(p []byte) (n int, err error) {
+	f.str = inmem.NewString(f.str.Name(), string(p))
+	if ok := f.ctx.Put(f.path, f.str); ok {
+		log.Println("[billy string] write: committed", f.str.Name(), len(p))
+		return len(p), nil
+	} else {
+		log.Println("[billy string] write failed:", f.str.Name(), len(p))
+		return 0, billy.ErrNotSupported
+	}
+	return
+}
+
+func (f *billyString) Read(p []byte) (n int, err error) {
+	value := []byte(f.str.Get())
+	copy(p, value)
+	n = len(value)
+	log.Println("[billy string] read", f.str.Name(), len(p), n)
+	if n < len(p) {
+		err = io.EOF
+	} else {
+		log.Println("BILLY STRING WARN: STRING BIGGER THAN READ!!")
+	}
+	return
+}
+
+func (f *billyString) Seek(offset int64, whence int) (n int64, err error) {
+	log.Println("[billy string] seek", f.str.Name(), offset, whence)
+	return
+}
+
+func (f *billyString) Close() error {
+	log.Println("[billy string] close", f.str.Name())
+	return nil
 }
