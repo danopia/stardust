@@ -102,12 +102,13 @@ func (e *Shape) Check(ctx base.Context, entry base.Entry) (ok bool) {
 		_, ok = entry.(base.Shape)
 
 	default:
-		log.Printf("Can't validate unknown type for %+v", e)
+		//log.Printf("Can't validate unknown type for %+v", e)
 
 	}
 
 	if !ok {
-		log.Printf("Validating failed: %+v against %+v", entry, e)
+		//log.Printf("Validating failed: %+v against %+v", entry, e)
+		log.Printf("Validating failed")
 	}
 
 	return

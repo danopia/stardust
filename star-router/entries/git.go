@@ -162,6 +162,7 @@ func (e *gitApi) Children() []string {
 	return []string{
 		"status",
 		"add",
+		"remove",
 		"commit",
 		"push",
 	}
@@ -181,6 +182,13 @@ func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
 		return inmem.NewFolderOf("add",
 			&gitAddFunc{e.worktree},
 			gitAddShape,
+			stringOutputShape,
+		).Freeze(), true
+
+	case "remove":
+		return inmem.NewFolderOf("remove",
+			&gitRemoveFunc{e.worktree},
+			gitRemoveShape,
 			stringOutputShape,
 		).Freeze(), true
 
@@ -265,6 +273,36 @@ func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Ent
 	}()
 
 	hash, err := e.worktree.Add(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return inmem.NewString("hash", hash.String())
+}
+
+var gitRemoveShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("path", "String"),
+		),
+	))
+
+type gitRemoveFunc struct {
+	worktree *git.Worktree
+}
+
+var _ base.Function = (*gitRemoveFunc)(nil)
+
+func (e *gitRemoveFunc) Name() string {
+	return "invoke"
+}
+
+func (e *gitRemoveFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	inputFolder := input.(base.Folder)
+	path, _ := helpers.GetChildString(inputFolder, "path")
+
+	hash, err := e.worktree.Remove(path)
 	if err != nil {
 		panic(err)
 	}
