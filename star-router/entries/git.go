@@ -165,6 +165,7 @@ func (e *gitApi) Children() []string {
 		"remove",
 		"commit",
 		"push",
+		"pull",
 	}
 }
 
@@ -203,6 +204,13 @@ func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
 		return inmem.NewFolderOf("push",
 			&gitPushFunc{e.repo},
 			gitPushShape,
+			stringOutputShape,
+		).Freeze(), true
+
+	case "pull":
+		return inmem.NewFolderOf("pull",
+			&gitPullFunc{e.repo},
+			gitPullShape,
 			stringOutputShape,
 		).Freeze(), true
 
@@ -360,6 +368,7 @@ func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.
 	return inmem.NewString("commit-hash", hash.String())
 }
 
+
 var gitPushShape *inmem.Shape = inmem.NewShape(
 	inmem.NewFolderOf("input-shape",
 		inmem.NewString("type", "Folder"),
@@ -393,6 +402,44 @@ func (e *gitPushFunc) Invoke(ctx base.Context, input base.Entry) (output base.En
 	})
 	if err != nil {
 		log.Println("git push:", err)
+		return inmem.NewString("error", err.Error())
+	}
+	return inmem.NewString("result", "ok")
+}
+
+
+var gitPullShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewFolderOf("remote-name",
+				inmem.NewString("type", "String"),
+				inmem.NewString("optional", "yes"),
+			),
+			//inmem.NewString("remote-name", "String"),
+			// TODO: list of refspec strings
+		),
+	))
+
+type gitPullFunc struct {
+	repo *git.Repository
+}
+
+var _ base.Function = (*gitPullFunc)(nil)
+
+func (e *gitPullFunc) Name() string {
+	return "invoke"
+}
+
+func (e *gitPullFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	inputFolder := input.(base.Folder)
+	remoteName, _ := helpers.GetChildString(inputFolder, "remote-name")
+
+	err := e.repo.Pull(&git.PullOptions{
+		RemoteName: remoteName,
+	})
+	if err != nil {
+		log.Println("git pull:", err)
 		return inmem.NewString("error", err.Error())
 	}
 	return inmem.NewString("result", "ok")
