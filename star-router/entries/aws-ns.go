@@ -4,13 +4,14 @@ import (
 	"log"
 	"path"
 
+	"github.com/danopia/stardust/star-router/base"
+	"github.com/danopia/stardust/star-router/helpers"
+	"github.com/danopia/stardust/star-router/inmem"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
 )
 
 // Persistent Namesystem using DynamoDB as a storage driver
@@ -21,7 +22,7 @@ import (
 
 // Table info:
 //   Named: Stardust_NameSystem
-//   Provisioning: I'm starting low @ 1 write, 2 read
+//   Provisioning: I'm starting low @ 5 write, 5 read
 //   Hash/partition: ParentId (string)
 //   Range/sort: Name (string)
 

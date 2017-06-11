@@ -22,6 +22,7 @@ func newRomEntry() *inmem.Folder {
 		getAwsDriver(),
 		getAwsNsDriver(),
 		getConsulDriver(),
+		getKubernetesDriver(),
 		getHueDriver(),
 	).Freeze()
 

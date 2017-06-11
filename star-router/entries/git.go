@@ -368,7 +368,6 @@ func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.
 	return inmem.NewString("commit-hash", hash.String())
 }
 
-
 var gitPushShape *inmem.Shape = inmem.NewShape(
 	inmem.NewFolderOf("input-shape",
 		inmem.NewString("type", "Folder"),
@@ -406,7 +405,6 @@ func (e *gitPushFunc) Invoke(ctx base.Context, input base.Entry) (output base.En
 	}
 	return inmem.NewString("result", "ok")
 }
-
 
 var gitPullShape *inmem.Shape = inmem.NewShape(
 	inmem.NewFolderOf("input-shape",
