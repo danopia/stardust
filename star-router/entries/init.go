@@ -5,9 +5,9 @@ import (
 	"path"
 	"time"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 )
 
 // Directory containing the clone function
@@ -65,7 +65,7 @@ type initSvc struct {
 var _ base.Folder = (*initSvc)(nil)
 
 func (s *initSvc) start(svc *service) {
-	runPath, ok := helpers.GetChildString(svc.cfgDir, "path")
+	runPath, ok := extras.GetChildString(svc.cfgDir, "path")
 	if !ok {
 		return
 	}
@@ -100,7 +100,7 @@ func (s *initSvc) start(svc *service) {
 	}
 
 	var inputEntry base.Entry
-	inputPath, ok := helpers.GetChildString(svc.cfgDir, "input-path")
+	inputPath, ok := extras.GetChildString(svc.cfgDir, "input-path")
 	if ok {
 		inputEntry, ok = s.ctx.Get(inputPath)
 		if !ok {
@@ -118,7 +118,7 @@ func (s *initSvc) start(svc *service) {
 
 	output := runFunc.Invoke(s.ctx, inputEntry)
 
-	mountPath, ok := helpers.GetChildString(svc.cfgDir, "mount-path")
+	mountPath, ok := extras.GetChildString(svc.cfgDir, "mount-path")
 	if !ok {
 		mountPath = ""
 	}

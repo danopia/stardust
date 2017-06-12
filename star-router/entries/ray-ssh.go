@@ -9,8 +9,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/inmem"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )

@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -41,8 +41,8 @@ func getGitDriver() *inmem.Folder {
 
 func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *billyAdapter) {
 	inputFolder := input.(base.Folder)
-	workingPath, _ := helpers.GetChildString(inputFolder, "working-path")
-	repoPath, _ := helpers.GetChildString(inputFolder, "repo-path")
+	workingPath, _ := extras.GetChildString(inputFolder, "working-path")
+	repoPath, _ := extras.GetChildString(inputFolder, "repo-path")
 	if repoPath == "" {
 		repoPath = workingPath + "/.git"
 	}
@@ -61,9 +61,9 @@ func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *
 
 func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	originUri, _ := helpers.GetChildString(inputFolder, "origin-uri")
-	repoPath, _ := helpers.GetChildString(inputFolder, "repo-path")
-	//idempotent, _ := helpers.GetChildString(inputFolder, "idempotent")
+	originUri, _ := extras.GetChildString(inputFolder, "origin-uri")
+	repoPath, _ := extras.GetChildString(inputFolder, "repo-path")
+	//idempotent, _ := extras.GetChildString(inputFolder, "idempotent")
 
 	// delete the target
 	ctx.Put(repoPath, nil)
@@ -268,7 +268,7 @@ func (e *gitAddFunc) Name() string {
 
 func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	path, _ := helpers.GetChildString(inputFolder, "path")
+	path, _ := extras.GetChildString(inputFolder, "path")
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -308,7 +308,7 @@ func (e *gitRemoveFunc) Name() string {
 
 func (e *gitRemoveFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	path, _ := helpers.GetChildString(inputFolder, "path")
+	path, _ := extras.GetChildString(inputFolder, "path")
 
 	hash, err := e.worktree.Remove(path)
 	if err != nil {
@@ -344,10 +344,10 @@ func (e *gitCommitFunc) Name() string {
 
 func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	message, _ := helpers.GetChildString(inputFolder, "message")
-	authorName, _ := helpers.GetChildString(inputFolder, "author-name")
-	authorEmail, _ := helpers.GetChildString(inputFolder, "author-email")
-	allStr, _ := helpers.GetChildString(inputFolder, "all")
+	message, _ := extras.GetChildString(inputFolder, "message")
+	authorName, _ := extras.GetChildString(inputFolder, "author-name")
+	authorEmail, _ := extras.GetChildString(inputFolder, "author-email")
+	allStr, _ := extras.GetChildString(inputFolder, "all")
 	all := allStr == "yes"
 
 	author := &object.Signature{
@@ -393,7 +393,7 @@ func (e *gitPushFunc) Name() string {
 
 func (e *gitPushFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	remoteName, _ := helpers.GetChildString(inputFolder, "remote-name")
+	remoteName, _ := extras.GetChildString(inputFolder, "remote-name")
 
 	// https doesn't have push yet
 	err := e.repo.Push(&git.PushOptions{
@@ -431,7 +431,7 @@ func (e *gitPullFunc) Name() string {
 
 func (e *gitPullFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	remoteName, _ := helpers.GetChildString(inputFolder, "remote-name")
+	remoteName, _ := extras.GetChildString(inputFolder, "remote-name")
 
 	err := e.repo.Pull(&git.PullOptions{
 		RemoteName: remoteName,

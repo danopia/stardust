@@ -7,9 +7,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +34,7 @@ func getKubernetesDriver() *inmem.Folder {
 // Function that creates a new Kubernetes client when invoked
 func startKubernetes(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	configPath, _ := helpers.GetChildString(inputFolder, "config-path")
+	configPath, _ := extras.GetChildString(inputFolder, "config-path")
 
 	// uses the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", configPath)
@@ -194,12 +194,12 @@ func (e *kubeRunPodFunc) getLogs(podName string, out *bytes.Buffer) error {
 // do we even want jobs then?
 func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	podName, _ := helpers.GetChildString(inputFolder, "name")
-	podImage, _ := helpers.GetChildString(inputFolder, "image")
-	podCommand, _ := helpers.GetChildString(inputFolder, "command")
+	podName, _ := extras.GetChildString(inputFolder, "name")
+	podImage, _ := extras.GetChildString(inputFolder, "image")
+	podCommand, _ := extras.GetChildString(inputFolder, "command")
 	podCmdParts := strings.Split(podCommand, " ")
 
-	podPrivileged, _ := helpers.GetChildString(inputFolder, "privileged")
+	podPrivileged, _ := extras.GetChildString(inputFolder, "privileged")
 	isPrivileged := podPrivileged == "yes"
 
 	pods := e.svc.CoreV1().Pods("default")
@@ -225,10 +225,11 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 			},
 			Containers: []apiv1.Container{
 				{
-					Name:    "pod",
-					Image:   podImage,
-					Command: []string{podCmdParts[0]},
-					Args:    podCmdParts[1:],
+					Name:            "pod",
+					Image:           podImage,
+					ImagePullPolicy: "Never",
+					Command:         []string{podCmdParts[0]},
+					Args:            podCmdParts[1:],
 					SecurityContext: &apiv1.SecurityContext{
 						Privileged: &isPrivileged,
 					},
@@ -311,9 +312,9 @@ func (e *kubeSubmitJobFunc) Name() string {
 
 func (e *kubeSubmitJobFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	jobName, _ := helpers.GetChildString(inputFolder, "name")
-	jobImage, _ := helpers.GetChildString(inputFolder, "image")
-	jobCommand, _ := helpers.GetChildString(inputFolder, "command")
+	jobName, _ := extras.GetChildString(inputFolder, "name")
+	jobImage, _ := extras.GetChildString(inputFolder, "image")
+	jobCommand, _ := extras.GetChildString(inputFolder, "command")
 	jobCmdParts := strings.Split(jobCommand, " ")
 
 	jobs := e.svc.BatchV1().Jobs("default")

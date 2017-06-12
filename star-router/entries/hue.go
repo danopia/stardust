@@ -3,9 +3,9 @@ package entries
 import (
 	"log"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 
 	"github.com/heatxsink/go-hue/configuration"
 	"github.com/heatxsink/go-hue/lights"
@@ -51,14 +51,14 @@ func curryPair(bridge base.Entry) func(ctx base.Context, input base.Entry) (outp
 
 func pairHue(ctx base.Context, bridge, input base.Entry) (output base.Entry) {
 	bridgeFolder := bridge.(base.Folder)
-	ipAddress, _ := helpers.GetChildString(bridgeFolder, "lan-ip-address")
-	macAddress, _ := helpers.GetChildString(bridgeFolder, "mac-address")
+	ipAddress, _ := extras.GetChildString(bridgeFolder, "lan-ip-address")
+	macAddress, _ := extras.GetChildString(bridgeFolder, "mac-address")
 
 	var appName, deviceType string
 	if input != nil {
 		inputFolder := input.(base.Folder)
-		appName, _ = helpers.GetChildString(inputFolder, "app-name")
-		deviceType, _ = helpers.GetChildString(inputFolder, "device-type")
+		appName, _ = extras.GetChildString(inputFolder, "app-name")
+		deviceType, _ = extras.GetChildString(inputFolder, "device-type")
 	}
 	if appName == "" {
 		appName = "apt.danopia.net"
@@ -87,8 +87,8 @@ func pairHue(ctx base.Context, bridge, input base.Entry) (output base.Entry) {
 // Function that creates a new Hue client when invoked
 func startHue(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	ipAddress, _ := helpers.GetChildString(inputFolder, "lan-ip-address")
-	secret, _ := helpers.GetChildString(inputFolder, "username")
+	ipAddress, _ := extras.GetChildString(inputFolder, "lan-ip-address")
+	secret, _ := extras.GetChildString(inputFolder, "username")
 
 	return inmem.NewFolderOf(input.Name(),
 		&hueLightDir{lights.New(ipAddress, secret)},

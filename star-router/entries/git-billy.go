@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/danopia/stardust/star-router/base"
+	"github.com/stardustapp/core/base"
 	"gopkg.in/src-d/go-billy.v2"
-	//"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	//"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 )
 
 type billyAdapter struct {

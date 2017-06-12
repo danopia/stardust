@@ -1,7 +1,7 @@
 package entries
 
 import (
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/inmem"
 )
 
 func newShapesEntry() *inmem.Folder {

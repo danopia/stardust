@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 )
 
 // Directory containing the clone function
@@ -28,7 +28,7 @@ func startOsFs(ctx base.Context, input base.Entry) (output base.Entry) {
 
 	hostPath := "."
 	if folder, ok := input.(base.Folder); ok {
-		hostPath, _ = helpers.GetChildString(folder, "host-path")
+		hostPath, _ = extras.GetChildString(folder, "host-path")
 	}
 
 	//if _, err := os.Open("/"); err == nil {

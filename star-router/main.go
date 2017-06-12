@@ -7,9 +7,9 @@ import (
 
 	//"github.com/danopia/stardust/wormhole/ddp"
 	//"github.com/danopia/stardust/wormhole/kernel"
-	"github.com/danopia/stardust/star-router/base"
+	"github.com/stardustapp/core/base"
 	"github.com/danopia/stardust/star-router/entries"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/inmem"
 )
 
 func main() {

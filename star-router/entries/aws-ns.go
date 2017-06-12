@@ -4,9 +4,9 @@ import (
 	"log"
 	"path"
 
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -37,10 +37,10 @@ func getAwsNsDriver() *inmem.Folder {
 // Function that creates a new AWS client when invoked
 func startAwsNs(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	accessKey, _ := helpers.GetChildString(inputFolder, "access_key_id")
-	secretKey, _ := helpers.GetChildString(inputFolder, "secret_access_key")
-	sessionToken, _ := helpers.GetChildString(inputFolder, "session_token")
-	region, _ := helpers.GetChildString(inputFolder, "region")
+	accessKey, _ := extras.GetChildString(inputFolder, "access_key_id")
+	secretKey, _ := extras.GetChildString(inputFolder, "secret_access_key")
+	sessionToken, _ := extras.GetChildString(inputFolder, "session_token")
+	region, _ := extras.GetChildString(inputFolder, "region")
 
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, sessionToken)
 

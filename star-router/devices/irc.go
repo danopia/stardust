@@ -1,7 +1,7 @@
 package devices
 
 import (
-	"github.com/danopia/stardust/star-router/base"
+	"github.com/stardustapp/core/base"
 	"github.com/danopia/stardust/wormhole/common"
 	"github.com/thoj/go-ircevent"
 	"log"

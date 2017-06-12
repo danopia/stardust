@@ -5,9 +5,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/danopia/stardust/star-router/base"
-	"github.com/danopia/stardust/star-router/helpers"
-	"github.com/danopia/stardust/star-router/inmem"
+	"github.com/stardustapp/core/base"
+	"github.com/stardustapp/core/extras"
+	"github.com/stardustapp/core/inmem"
 )
 
 // Directory containing the clone function
@@ -21,10 +21,10 @@ func getAwsDriver() *inmem.Folder {
 // Function that creates a new AWS client when invoked
 func startAws(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
-	accessKey, _ := helpers.GetChildString(inputFolder, "access_key_id")
-	secretKey, _ := helpers.GetChildString(inputFolder, "secret_access_key")
-	sessionToken, _ := helpers.GetChildString(inputFolder, "session_token")
-	region, _ := helpers.GetChildString(inputFolder, "region")
+	accessKey, _ := extras.GetChildString(inputFolder, "access_key_id")
+	secretKey, _ := extras.GetChildString(inputFolder, "secret_access_key")
+	sessionToken, _ := extras.GetChildString(inputFolder, "session_token")
+	region, _ := extras.GetChildString(inputFolder, "region")
 
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, sessionToken)
 
@@ -93,7 +93,7 @@ func (e *awsSqs) Fetch(name string) (entry base.Entry, ok bool) {
 			inmem.NewLink("input-shape", "/rom/shapes/sqs-receive-message-input"),
 			inmem.NewFunction("invoke", func(ctx base.Context, input base.Entry) (output base.Entry) {
 				inputFolder := input.(base.Folder)
-				queueUrl, _ := helpers.GetChildString(inputFolder, "queue-url")
+				queueUrl, _ := extras.GetChildString(inputFolder, "queue-url")
 				// inmem.NewString("max-number-of-messages", "String"),
 				// inmem.NewString("wait-time-seconds", "String"),
 				// inmem.NewString("visibility-timeout", "String"),
