@@ -163,9 +163,12 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 
 	cwdEnt, ok := ray.Fetch("cwd")
 	if !ok {
-		panic("wat2")
+		panic("wat2a")
 	}
-	cwd := cwdEnt.(base.String)
+	cwdFunc, ok := cwdEnt.(base.Function)
+	if !ok {
+		panic("wat2b")
+	}
 
 	term := terminal.NewTerminal(connection, "> ")
 
@@ -227,7 +230,7 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 
 	for {
 		term.Write([]byte("\n"))
-		term.SetPrompt(fmt.Sprintf("%s $ ", cwd.Get()))
+		term.SetPrompt(fmt.Sprintf("%s $ ", cwdFunc.Invoke(e.ctx, nil).(base.String).Get()))
 
 		line, err := term.ReadLine()
 		if err == io.EOF {

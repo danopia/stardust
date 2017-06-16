@@ -23,7 +23,7 @@ func getRayDriver() base.Folder {
 
 // Function that returns the given ray's location
 type cwdProvider struct {
-	ray *rayCtx
+	value string
 }
 
 var _ base.Function = (*cwdProvider)(nil)
@@ -33,7 +33,7 @@ func (e *cwdProvider) Name() string {
 }
 
 func (e *cwdProvider) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	return inmem.NewString("cwd", e.ray.cwd)
+	return inmem.NewString("cwd", e.value)
 }
 
 // Evaluation context for a ray
@@ -45,7 +45,7 @@ type rayCtx struct {
 	output   base.Log
 	//result   base.Queue
 	environ base.Folder
-	cwd     string
+	cwd     cwdProvider
 }
 
 func newRayCtx(cctx base.Context) *rayCtx {
@@ -57,6 +57,7 @@ func newRayCtx(cctx base.Context) *rayCtx {
 		//result:   inmem.NewBufferedQueue("result", 1),
 		environ: inmem.NewFolder("environ"),
 	}
+	ctx.cwd.value = "/"
 	return ctx
 }
 
@@ -96,7 +97,7 @@ func (c *rayCtx) getBundle() base.Folder {
 		c.output,
 		//c.result,
 		c.environ,
-		&cwdProvider{c},
+		&c.cwd,
 	).Freeze()
 }
 
@@ -125,7 +126,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	case "cat":
 		ok = true
 		for _, subPath := range args {
-			entry, ok := c.ctx.Get(path.Join(c.cwd, subPath))
+			entry, ok := c.ctx.Get(path.Join(c.cwd.value, subPath))
 			if !ok {
 				return ok
 			}
@@ -148,7 +149,8 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 			return
 		}
 
-		functionE, ok := c.ctx.Get(path.Join(c.cwd, args[0]))
+		var functionE base.Entry
+		functionE, ok = c.ctx.Get(path.Join(c.cwd.value, args[0]))
 		if !ok {
 			c.writeOut(cmd, fmt.Sprintf("Couldn't find function named %s", args[0]))
 			return ok
@@ -157,7 +159,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 		var input base.Entry
 		if len(args) >= 2 && args[1] != "/dev/null" {
-			input, ok = c.ctx.Get(path.Join(c.cwd, args[1]))
+			input, ok = c.ctx.Get(path.Join(c.cwd.value, args[1]))
 			if !ok {
 				c.writeOut(cmd, fmt.Sprintf("Couldn't find input named %s", args[1]))
 				return ok
@@ -167,7 +169,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 		output := function.Invoke(c.ctx, input)
 
 		if len(args) >= 3 && args[2] != "/dev/null" && output != nil {
-			ok = c.ctx.Put(path.Join(c.cwd, args[2]), output)
+			ok = c.ctx.Put(path.Join(c.cwd.value, args[2]), output)
 			if !ok {
 				c.writeOut(cmd, fmt.Sprintf("Couldn't write output to %s", output))
 				return ok
@@ -177,12 +179,12 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 	case "cd":
 		if len(args) == 1 {
-			_, ok = c.ctx.GetFolder(path.Join(c.cwd, args[0]))
+			_, ok = c.ctx.GetFolder(path.Join(c.cwd.value, args[0]))
 			if ok {
-				c.cwd = path.Join(c.cwd, args[0])
+				c.cwd.value = path.Join(c.cwd.value, args[0])
 			}
 		} else if len(args) == 0 {
-			c.cwd = ""
+			c.cwd.value = "/"
 			ok = true
 		}
 
@@ -194,11 +196,11 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	case "ls":
 		var folder base.Folder
 		if len(args) == 1 {
-			if folder, ok = c.ctx.GetFolder(path.Join(c.cwd, args[0])); !ok {
+			if folder, ok = c.ctx.GetFolder(path.Join(c.cwd.value, args[0])); !ok {
 				return
 			}
 		} else if len(args) == 0 {
-			if folder, ok = c.ctx.GetFolder(c.cwd); !ok {
+			if folder, ok = c.ctx.GetFolder(c.cwd.value); !ok {
 				return
 			}
 		} else {
@@ -213,11 +215,11 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 	case "ll":
 		var folder base.Folder
 		if len(args) == 1 {
-			if folder, ok = c.ctx.GetFolder(path.Join(c.cwd, args[0])); !ok {
+			if folder, ok = c.ctx.GetFolder(path.Join(c.cwd.value, args[0])); !ok {
 				return
 			}
 		} else if len(args) == 0 {
-			if folder, ok = c.ctx.GetFolder(c.cwd); !ok {
+			if folder, ok = c.ctx.GetFolder(c.cwd.value); !ok {
 				return
 			}
 		} else {

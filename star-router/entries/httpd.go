@@ -51,7 +51,7 @@ func (e *httpd) listen() {
 	host := fmt.Sprint("0.0.0.0:", 9234)
 	log.Printf("Listening on %s...", host)
 	if err := http.ListenAndServe(host, nil); err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Println("ListenAndServe: ", err)
 	}
 }
 
