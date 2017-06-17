@@ -285,7 +285,14 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			var shapeList []base.Shape
 			if shapePaths := r.Header["X-Sd-Match-Shape"]; len(shapePaths) > 0 {
-				for _, path := range shapePaths {
+				var pathList []string
+				for _, segment := range shapePaths {
+					if len(segment) > 0 {
+						pathList = append(pathList, strings.Split(segment, ",")...)
+					}
+				}
+				for _, path := range pathList {
+					log.Println(path)
 					if shape, ok := e.ctx.GetShape(path); ok {
 						shapeList = append(shapeList, shape)
 					}
@@ -315,7 +322,7 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-				var shapes []string
+				shapes := make([]string, 0)
 				for _, shape := range shapeList {
 					if shape.Check(e.ctx, sub) {
 						shapes = append(shapes, shape.Name())
