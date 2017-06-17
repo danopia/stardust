@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/stardustapp/core/base"
 	"github.com/stardustapp/core/inmem"
-	"github.com/hashicorp/consul/api"
 )
 
 // Directory containing the clone function

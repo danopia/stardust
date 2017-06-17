@@ -246,7 +246,7 @@ var gitStatusShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitStatusFunc struct {
-	api  *gitApi
+	api      *gitApi
 	worktree *git.Worktree
 }
 
@@ -276,7 +276,7 @@ var gitAddShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitAddFunc struct {
-	api  *gitApi
+	api      *gitApi
 	worktree *git.Worktree
 }
 
@@ -319,7 +319,7 @@ var gitRemoveShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitRemoveFunc struct {
-	api  *gitApi
+	api      *gitApi
 	worktree *git.Worktree
 }
 
@@ -358,7 +358,7 @@ var gitCommitShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitCommitFunc struct {
-	api  *gitApi
+	api      *gitApi
 	worktree *git.Worktree
 }
 

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattn/go-shellwords"
 	"github.com/stardustapp/core/base"
 	"github.com/stardustapp/core/inmem"
-	"github.com/mattn/go-shellwords"
 )
 
 // Directory containing the clone function

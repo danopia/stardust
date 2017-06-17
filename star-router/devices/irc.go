@@ -1,8 +1,8 @@
 package devices
 
 import (
-	"github.com/stardustapp/core/base"
 	"github.com/danopia/stardust/wormhole/common"
+	"github.com/stardustapp/core/base"
 	"github.com/thoj/go-ircevent"
 	"log"
 	"strings"
