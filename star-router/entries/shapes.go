@@ -9,6 +9,7 @@ func newShapesEntry() *inmem.Folder {
 		functionShape,
 		awsConfigShape,
 		hueBridgeConfigShape,
+		webAppShape,
 		awsSqsReceiveMessageInputShape,
 	).Freeze()
 }
@@ -69,6 +70,19 @@ var hueBridgeConfigShape *inmem.Shape = inmem.NewShape(
 			inmem.NewFolderOf("username",
 				inmem.NewString("type", "String"),
 				inmem.NewString("optional", "no"),
+			),
+		),
+	))
+
+var webAppShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("web-app",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("index.html", "File"),
+			inmem.NewString("app-name", "String"),
+			inmem.NewFolderOf("app-icon.png",
+				inmem.NewString("type", "File"),
+				inmem.NewString("optional", "yes"),
 			),
 		),
 	))
