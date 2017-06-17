@@ -39,7 +39,7 @@ func getGitDriver() *inmem.Folder {
 	).Freeze()
 }
 
-func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *billyAdapter) {
+func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *billyAdapter, chan bool) {
 	inputFolder := input.(base.Folder)
 	workingPath, _ := extras.GetChildString(inputFolder, "working-path")
 	repoPath, _ := extras.GetChildString(inputFolder, "repo-path")
@@ -47,16 +47,28 @@ func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *
 		repoPath = workingPath + "/.git"
 	}
 
-	repoTree := newBillyAdapter(ctx, repoPath)
-	workTree := newBillyAdapter(ctx, workingPath)
+	dumpSig := make(chan bool)
+	dumpSig1 := make(chan bool)
+	dumpSig2 := make(chan bool)
+	go func() {
+		defer close(dumpSig1)
+		defer close(dumpSig2)
+		for x := range dumpSig {
+			dumpSig1 <- x
+			dumpSig2 <- x
+		}
+	}()
+
+	repoTree := newBillyAdapter(ctx, repoPath, dumpSig1)
+	workTree := newBillyAdapter(ctx, workingPath, dumpSig2)
 
 	repoStore, err := filesystem.NewStorage(repoTree)
 	if err != nil {
 		log.Println("[git] clone storage problem:", err)
-		return repoStore, nil
+		return repoStore, nil, nil
 	}
 
-	return repoStore, workTree
+	return repoStore, workTree, dumpSig
 }
 
 func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
@@ -69,7 +81,7 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	ctx.Put(repoPath, nil)
 	ctx.Put(repoPath, inmem.NewFolder("git"))
 
-	repoStore, workTree := inflateGitInput(ctx, input)
+	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
 		log.Println("[git] clone storage problem:")
 		return nil
@@ -92,11 +104,12 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	return &gitApi{
 		repo:     repo,
 		worktree: worktree,
+		dumpSig:  dumpSig,
 	}
 }
 
 func gitInit(ctx base.Context, input base.Entry) (output base.Entry) {
-	repoStore, workTree := inflateGitInput(ctx, input)
+	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
 		log.Println("[git] init storage problem:")
 		return nil
@@ -117,11 +130,12 @@ func gitInit(ctx base.Context, input base.Entry) (output base.Entry) {
 	return &gitApi{
 		repo:     repo,
 		worktree: worktree,
+		dumpSig:  dumpSig,
 	}
 }
 
 func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
-	repoStore, workTree := inflateGitInput(ctx, input)
+	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
 		log.Println("[git] open storage problem:")
 		return nil
@@ -142,6 +156,7 @@ func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
 	return &gitApi{
 		repo:     repo,
 		worktree: worktree,
+		dumpSig:  dumpSig,
 	}
 }
 
@@ -150,6 +165,7 @@ func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
 type gitApi struct {
 	repo     *git.Repository
 	worktree *git.Worktree
+	dumpSig  chan bool
 }
 
 var _ base.Folder = (*gitApi)(nil)
@@ -174,42 +190,42 @@ func (e *gitApi) Fetch(name string) (entry base.Entry, ok bool) {
 
 	case "status":
 		return inmem.NewFolderOf("status",
-			&gitStatusFunc{e.worktree},
+			&gitStatusFunc{e, e.worktree},
 			gitStatusShape,
 			stringOutputShape,
 		).Freeze(), true
 
 	case "add":
 		return inmem.NewFolderOf("add",
-			&gitAddFunc{e.worktree},
+			&gitAddFunc{e, e.worktree},
 			gitAddShape,
 			stringOutputShape,
 		).Freeze(), true
 
 	case "remove":
 		return inmem.NewFolderOf("remove",
-			&gitRemoveFunc{e.worktree},
+			&gitRemoveFunc{e, e.worktree},
 			gitRemoveShape,
 			stringOutputShape,
 		).Freeze(), true
 
 	case "commit":
 		return inmem.NewFolderOf("commit",
-			&gitCommitFunc{e.worktree},
+			&gitCommitFunc{e, e.worktree},
 			gitCommitShape,
 			stringOutputShape,
 		).Freeze(), true
 
 	case "push":
 		return inmem.NewFolderOf("push",
-			&gitPushFunc{e.repo},
+			&gitPushFunc{e, e.repo},
 			gitPushShape,
 			stringOutputShape,
 		).Freeze(), true
 
 	case "pull":
 		return inmem.NewFolderOf("pull",
-			&gitPullFunc{e.repo},
+			&gitPullFunc{e, e.repo},
 			gitPullShape,
 			stringOutputShape,
 		).Freeze(), true
@@ -230,6 +246,7 @@ var gitStatusShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitStatusFunc struct {
+	api  *gitApi
 	worktree *git.Worktree
 }
 
@@ -240,6 +257,8 @@ func (e *gitStatusFunc) Name() string {
 }
 
 func (e *gitStatusFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	e.api.dumpSig <- true
+
 	status, err := e.worktree.Status()
 	if err != nil {
 		panic(err)
@@ -257,6 +276,7 @@ var gitAddShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitAddFunc struct {
+	api  *gitApi
 	worktree *git.Worktree
 }
 
@@ -267,6 +287,8 @@ func (e *gitAddFunc) Name() string {
 }
 
 func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	e.api.dumpSig <- true
+
 	inputFolder := input.(base.Folder)
 	path, _ := extras.GetChildString(inputFolder, "path")
 
@@ -297,6 +319,7 @@ var gitRemoveShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitRemoveFunc struct {
+	api  *gitApi
 	worktree *git.Worktree
 }
 
@@ -307,6 +330,8 @@ func (e *gitRemoveFunc) Name() string {
 }
 
 func (e *gitRemoveFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	e.api.dumpSig <- true
+
 	inputFolder := input.(base.Folder)
 	path, _ := extras.GetChildString(inputFolder, "path")
 
@@ -333,6 +358,7 @@ var gitCommitShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitCommitFunc struct {
+	api  *gitApi
 	worktree *git.Worktree
 }
 
@@ -343,6 +369,8 @@ func (e *gitCommitFunc) Name() string {
 }
 
 func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	e.api.dumpSig <- true
+
 	inputFolder := input.(base.Folder)
 	message, _ := extras.GetChildString(inputFolder, "message")
 	authorName, _ := extras.GetChildString(inputFolder, "author-name")
@@ -382,6 +410,7 @@ var gitPushShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitPushFunc struct {
+	api  *gitApi
 	repo *git.Repository
 }
 
@@ -392,6 +421,8 @@ func (e *gitPushFunc) Name() string {
 }
 
 func (e *gitPushFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	e.api.dumpSig <- true
+
 	inputFolder := input.(base.Folder)
 	remoteName, _ := extras.GetChildString(inputFolder, "remote-name")
 
@@ -420,6 +451,7 @@ var gitPullShape *inmem.Shape = inmem.NewShape(
 	))
 
 type gitPullFunc struct {
+	api  *gitApi
 	repo *git.Repository
 }
 
@@ -430,6 +462,8 @@ func (e *gitPullFunc) Name() string {
 }
 
 func (e *gitPullFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	e.api.dumpSig <- true
+
 	inputFolder := input.(base.Folder)
 	remoteName, _ := extras.GetChildString(inputFolder, "remote-name")
 

@@ -24,14 +24,25 @@ type billyAdapter struct {
 	tempCount int
 	tempFiles map[string]base.File
 	cache     map[string]base.Entry
+	dumpSig   chan bool
 }
 
-func newBillyAdapter(ctx base.Context, prefix string) *billyAdapter {
-	return &billyAdapter{
+func newBillyAdapter(ctx base.Context, prefix string, dumpSig chan bool) *billyAdapter {
+	adapter := &billyAdapter{
 		ctx:       ctx,
 		prefix:    prefix,
 		tempFiles: make(map[string]base.File),
 		cache:     make(map[string]base.Entry),
+		dumpSig:   dumpSig,
+	}
+	go adapter.dumpOnCommand()
+	return adapter
+}
+
+func (a *billyAdapter) dumpOnCommand() {
+	for _ = range a.dumpSig {
+		log.Println("Dumping billy cache")
+		a.cache = make(map[string]base.Entry)
 	}
 }
 
