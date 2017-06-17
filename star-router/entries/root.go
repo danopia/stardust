@@ -2,7 +2,7 @@ package entries
 
 import (
 	"github.com/stardustapp/core/inmem"
-	//"github.com/stardustapp/core/drivers"
+	"github.com/stardustapp/core/drivers"
 )
 
 // Presents the root name
@@ -25,8 +25,8 @@ func newRomEntry() *inmem.Folder {
 		getConsulDriver(),
 		getKubernetesDriver(),
 		getHueDriver(),
-		//drivers.GetNsexportDriver(),
-		//drivers.GetNsimportDriver(),
+		drivers.GetNsexportDriver(),
+		drivers.GetNsimportDriver(),
 	).Freeze()
 
 	bin := inmem.NewFolderOf("bin",

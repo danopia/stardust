@@ -292,7 +292,6 @@ func (e *httpd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				for _, path := range pathList {
-					log.Println(path)
 					if shape, ok := e.ctx.GetShape(path); ok {
 						shapeList = append(shapeList, shape)
 					}

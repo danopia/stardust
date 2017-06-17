@@ -2,6 +2,7 @@ package entries
 
 import (
 	"log"
+	"sort"
 	"path"
 	"time"
 
@@ -27,17 +28,21 @@ func initFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 		services: make(map[string]*service),
 	}
 
+	var names []string
 	for _, name := range s.cfgDir.Children() {
 		if folder, ok := s.cfgDir.Fetch(name); ok {
 			s.services[name] = newService(folder.(base.Folder))
+			names = append(names, name)
 		}
 	}
+	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
 
 	ctx.Put("/n/init", s)
 
 	s.start(s.services["aws-ns"])
 
-	for name, svc := range s.services {
+	for _, name := range names {
+		svc := s.services[name]
 		if !svc.running {
 			log.Println("init: Starting service", name)
 			s.start(svc)
