@@ -168,13 +168,35 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 		output := function.Invoke(c.ctx, input)
 
-		if len(args) >= 3 && args[2] != "/dev/null" && output != nil {
-			ok = c.ctx.Put(path.Join(c.cwd.value, args[2]), output)
-			if !ok {
-				c.writeOut(cmd, fmt.Sprintf("Couldn't write output to %s", output))
-				return ok
+		if output != nil {
+			if len(args) >= 3 && args[2] != "/dev/null" {
+				ok = c.ctx.Put(path.Join(c.cwd.value, args[2]), output)
+				if !ok {
+					c.writeOut(cmd, fmt.Sprintf("Couldn't write output to %s", output))
+					return ok
+				}
+				c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
+			} else {
+				switch output := output.(type) {
+				case base.String:
+					c.writeOut(cmd, fmt.Sprintf("=> %s", output.Get()))
+				case base.Folder:
+					for _, name := range output.Children() {
+						if child, ok := output.Fetch(name); ok {
+							if str, ok := child.(base.String); ok {
+								c.writeOut(cmd, fmt.Sprintf("%s: %s", name, str.Get()))
+							} else {
+								c.writeOut(cmd, fmt.Sprintf("%s: unknown, lol", name))
+							}
+						} else {
+							c.writeOut(cmd, fmt.Sprintf("%s: missing, lol", name))
+						}
+					}
+				default:
+					// TODO: support more outputs, general printing library
+					c.writeOut(cmd, fmt.Sprintf("Output was not printable"))
+				}
 			}
-			c.writeOut(cmd, fmt.Sprintf("Wrote result to %s", args[2]))
 		}
 
 	case "cd":
