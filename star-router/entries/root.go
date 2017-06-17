@@ -1,8 +1,8 @@
 package entries
 
 import (
-	"github.com/stardustapp/core/inmem"
 	"github.com/stardustapp/core/drivers"
+	"github.com/stardustapp/core/inmem"
 )
 
 // Presents the root name

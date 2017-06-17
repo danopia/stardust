@@ -12,8 +12,10 @@ import (
 	"github.com/stardustapp/core/inmem"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	apiv1 "k8s.io/client-go/pkg/api/v1"
+	appsv1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
 	batchv1 "k8s.io/client-go/pkg/apis/batch/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -72,6 +74,7 @@ func (e *kubeApi) Children() []string {
 	return []string{
 		"list-pods",
 		"run-pod",
+		"deploy-svc",
 		"submit-job",
 	}
 }
@@ -90,6 +93,13 @@ func (e *kubeApi) Fetch(name string) (entry base.Entry, ok bool) {
 		return inmem.NewFolderOf("run-pod",
 			&kubeRunPodFunc{e.svc},
 			kubeRunPodShape,
+			stringOutputShape,
+		).Freeze(), true
+
+	case "deploy-svc":
+		return inmem.NewFolderOf("deploy-svc",
+			&kubeDeploySvcFunc{e.svc},
+			kubeDeploySvcShape,
 			stringOutputShape,
 		).Freeze(), true
 
@@ -288,6 +298,174 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 	}
 
 	return inmem.NewString("output", logs.String())
+}
+
+var kubeDeploySvcShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("input-shape",
+		inmem.NewString("type", "Folder"),
+		inmem.NewFolderOf("props",
+			inmem.NewString("name", "String"),
+			inmem.NewString("image", "String"),
+		),
+	))
+
+type kubeDeploySvcFunc struct {
+	svc *kubernetes.Clientset
+}
+
+var _ base.Function = (*kubeDeploySvcFunc)(nil)
+
+func (e *kubeDeploySvcFunc) Name() string {
+	return "invoke"
+}
+
+/*
+func (e *kubeDeploySvcFunc) getLogs(podName string, out *bytes.Buffer) error {
+	req := e.svc.CoreV1().RESTClient().Get().
+		Namespace("default").
+		Name(podName).
+		Resource("pods").
+		SubResource("log") //.
+		//Param("follow", strconv.FormatBool(logOptions.Follow)).
+		//Param("container", "pod").
+		//Param("previous", strconv.FormatBool(logOptions.Previous)).
+		//Param("timestamps", strconv.FormatBool(logOptions.Timestamps)).
+		//Param("sinceSeconds", strconv.FormatInt(*logOptions.SinceSeconds, 10)).
+		//Param("sinceTime", logOptions.SinceTime.Format(time.RFC3339)).
+		//Param("limitBytes", strconv.FormatInt(*logOptions.LimitBytes, 10)).
+		//Param("tailLines", strconv.FormatInt(*logOptions.TailLines, 10))
+
+	readCloser, err := req.Stream()
+	if err != nil {
+		return err
+	}
+
+	defer readCloser.Close()
+	_, err = io.Copy(out, readCloser)
+	return err
+}
+*/
+
+// jobs will create unlimited pods if the failure keeps happening
+// do we even want jobs then?
+func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
+	inputFolder := input.(base.Folder)
+	svcName, _ := extras.GetChildString(inputFolder, "name")
+	podImage, _ := extras.GetChildString(inputFolder, "image")
+
+	var replicas int32 = 1
+	MaxUnavailable := intstr.FromInt(0)
+	MaxSurge := intstr.FromInt(1)
+	desiredDeployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1beta1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "stardriver-" + svcName,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"stardriver": svcName,
+				},
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &MaxUnavailable,
+					MaxSurge:       &MaxSurge,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Labels: map[string]string{
+						"stardriver": svcName,
+					},
+					Annotations: map[string]string{
+						"stardust-nonce": extras.GenerateSecret(),
+					},
+				},
+				Spec: apiv1.PodSpec{
+					RestartPolicy: "Always",
+					Containers: []apiv1.Container{
+						{
+							Name:            "driver",
+							Image:           podImage,
+							ImagePullPolicy: "Never",
+							//Command:         []string{podCmdParts[0]},
+							//Args:            podCmdParts[1:],
+							Ports: []apiv1.ContainerPort{
+								{
+									Name:          "http",
+									ContainerPort: 9234,
+									Protocol:      "TCP",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	desiredService := &apiv1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "api/v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "stardriver-" + svcName,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:       "http",
+					Protocol:   "TCP",
+					Port:       80,
+					TargetPort: intstr.FromInt(9234),
+				},
+			},
+			Selector: map[string]string{
+				"stardriver": svcName,
+			},
+			Type: apiv1.ServiceTypeNodePort,
+		},
+	}
+
+	//services := e.svc.CoreV1().Deployments("default")
+	deployments := e.svc.AppsV1beta1().Deployments("default")
+	_, err := deployments.Update(desiredDeployment)
+	if err != nil && strings.HasSuffix(err.Error(), "not found") {
+		_, err = deployments.Create(desiredDeployment)
+	}
+
+	if err != nil {
+		log.Println("Deployment submission failed:", err)
+		return inmem.NewString("error", err.Error())
+	}
+
+	services := e.svc.CoreV1().Services("default")
+	_, err = services.Create(desiredService)
+	if err != nil && strings.HasSuffix(err.Error(), "already exists") {
+		log.Println("k8s:", err.Error())
+		err = nil
+	}
+	if err != nil {
+		log.Println("Service submission failed:", err)
+		return inmem.NewString("error", err.Error())
+	}
+
+	svc, err := services.Get(desiredService.ObjectMeta.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Println("Service fetching failed:", err)
+		return inmem.NewString("error", err.Error())
+	}
+
+	log.Printf("Driver is exposed on port %d", svc.Spec.Ports[0].NodePort)
+	return inmem.NewString("endpoint-url", fmt.Sprintf("http://192.168.86.3:%d/~~export", svc.Spec.Ports[0].NodePort))
 }
 
 var kubeSubmitJobShape *inmem.Shape = inmem.NewShape(
