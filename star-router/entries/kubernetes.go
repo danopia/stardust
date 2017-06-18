@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/stardustapp/core/base"
 	"github.com/stardustapp/core/extras"
@@ -354,8 +355,8 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 	podImage, _ := extras.GetChildString(inputFolder, "image")
 
 	var replicas int32 = 1
-	MaxUnavailable := intstr.FromInt(0)
-	MaxSurge := intstr.FromInt(1)
+	//MaxUnavailable := intstr.FromInt(0)
+	//MaxSurge := intstr.FromInt(1)
 	desiredDeployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1beta1",
@@ -372,11 +373,12 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxUnavailable: &MaxUnavailable,
-					MaxSurge:       &MaxSurge,
-				},
+				Type: appsv1.RecreateDeploymentStrategyType,
+				// Type: appsv1.RollingUpdateDeploymentStrategyType,
+				// RollingUpdate: &appsv1.RollingUpdateDeployment{
+				// 	MaxUnavailable: &MaxUnavailable,
+				// 	MaxSurge:       &MaxSurge,
+				// },
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -435,7 +437,6 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 		},
 	}
 
-	//services := e.svc.CoreV1().Deployments("default")
 	deployments := e.svc.AppsV1beta1().Deployments("default")
 	_, err := deployments.Update(desiredDeployment)
 	if err != nil && strings.HasSuffix(err.Error(), "not found") {
@@ -456,6 +457,26 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 	if err != nil {
 		log.Println("Service submission failed:", err)
 		return inmem.NewString("error", err.Error())
+	}
+
+	// Wait for deployment to stabilize
+	condition := &appsv1.DeploymentCondition{
+		Status: apiv1.ConditionUnknown,
+	}
+	for condition.Status != apiv1.ConditionTrue || condition.Reason != "NewReplicaSetAvailable" {
+		time.Sleep(1000 * time.Millisecond)
+		depl, err := deployments.Get(desiredDeployment.ObjectMeta.Name, metav1.GetOptions{})
+		if err != nil {
+			log.Println("Deployment polling failed:", err)
+			return inmem.NewString("error", err.Error())
+		}
+
+		for _, cond := range depl.Status.Conditions {
+			if cond.Type == "Progressing" {
+				condition = &cond
+			}
+		}
+		log.Printf("deployment progress: %+v", condition)
 	}
 
 	svc, err := services.Get(desiredService.ObjectMeta.Name, metav1.GetOptions{})
