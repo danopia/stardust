@@ -460,10 +460,8 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 	}
 
 	// Wait for deployment to stabilize
-	condition := &appsv1.DeploymentCondition{
-		Status: apiv1.ConditionUnknown,
-	}
-	for condition.Status != apiv1.ConditionTrue || condition.Reason != "NewReplicaSetAvailable" {
+	var ready bool
+	for !ready { // condition.Status != apiv1.ConditionTrue || condition.Reason != "NewReplicaSetAvailable" {
 		time.Sleep(1000 * time.Millisecond)
 		depl, err := deployments.Get(desiredDeployment.ObjectMeta.Name, metav1.GetOptions{})
 		if err != nil {
@@ -471,13 +469,23 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 			return inmem.NewString("error", err.Error())
 		}
 
+		ready = true
 		for _, cond := range depl.Status.Conditions {
 			if cond.Type == "Progressing" {
-				condition = &cond
+				if cond.Status != apiv1.ConditionTrue || cond.Reason != "NewReplicaSetAvailable" {
+					ready = false
+					log.Printf("deployment %s progress: %v", desiredDeployment.ObjectMeta.Name, cond)
+				}
+			}
+			if cond.Type == "Available" {
+				if cond.Status != apiv1.ConditionTrue {
+					ready = false
+					log.Printf("deployment %s availability: %v", desiredDeployment.ObjectMeta.Name, cond)
+				}
 			}
 		}
-		log.Printf("deployment progress: %+v", condition)
 	}
+	log.Printf("deployment %s is updated and available", desiredDeployment.ObjectMeta.Name)
 
 	svc, err := services.Get(desiredService.ObjectMeta.Name, metav1.GetOptions{})
 	if err != nil {
