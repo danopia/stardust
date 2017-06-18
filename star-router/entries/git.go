@@ -2,6 +2,7 @@ package entries
 
 import (
 	"log"
+	"path"
 	"os"
 	"time"
 
@@ -75,11 +76,14 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	inputFolder := input.(base.Folder)
 	originUri, _ := extras.GetChildString(inputFolder, "origin-uri")
 	repoPath, _ := extras.GetChildString(inputFolder, "repo-path")
+	workingPath, _ := extras.GetChildString(inputFolder, "working-path")
 	//idempotent, _ := extras.GetChildString(inputFolder, "idempotent")
 
 	// delete the target
 	ctx.Put(repoPath, nil)
 	ctx.Put(repoPath, inmem.NewFolder("git"))
+	ctx.Put(workingPath, nil)
+	ctx.Put(workingPath, inmem.NewFolder(path.Base(workingPath)))
 
 	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {

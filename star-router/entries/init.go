@@ -40,6 +40,7 @@ func initFunc(ctx base.Context, input base.Entry) (output base.Entry) {
 	ctx.Put("/n/init", s)
 
 	s.start(s.services["aws-ns"])
+	s.start(s.services["redis-ns"])
 
 	for _, name := range names {
 		svc := s.services[name]
