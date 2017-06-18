@@ -23,32 +23,19 @@ type billyAdapter struct {
 	prefix    string
 	tempCount int
 	tempFiles map[string]base.File
-	cache     map[string]base.Entry
-	dumpSig   chan bool
 }
 
-func newBillyAdapter(ctx base.Context, prefix string, dumpSig chan bool) *billyAdapter {
+func newBillyAdapter(ctx base.Context, prefix string) *billyAdapter {
 	adapter := &billyAdapter{
 		ctx:       ctx,
 		prefix:    prefix,
 		tempFiles: make(map[string]base.File),
-		cache:     make(map[string]base.Entry),
-		dumpSig:   dumpSig,
 	}
-	go adapter.dumpOnCommand()
 	return adapter
-}
-
-func (a *billyAdapter) dumpOnCommand() {
-	for _ = range a.dumpSig {
-		log.Println("Dumping billy cache")
-		a.cache = make(map[string]base.Entry)
-	}
 }
 
 func (a *billyAdapter) Create(filename string) (billy.File, error) {
 	log.Println("[billy] create", filename)
-	delete(a.cache, filename)
 
 	// TODO: include dirmode?
 	if err := a.MkdirAll(path.Dir(filename), 0666); err != nil {
@@ -71,22 +58,10 @@ func (a *billyAdapter) Create(filename string) (billy.File, error) {
 }
 func (a *billyAdapter) Open(filename string) (billy.File, error) {
 	log.Println("[billy] open", filename)
-	cache, wasCached := a.cache[filename]
 
 	if strings.HasSuffix(filename, ".string") {
-		if cacheStr, ok := cache.(base.String); ok && wasCached {
-			return &billyString{
-				adapter:  a,
-				ctx:      a.ctx,
-				path:     a.prefix + "/" + strings.TrimSuffix(filename, ".string"),
-				filename: filename,
-				str:      cacheStr,
-			}, nil
-		}
-
 		filename = strings.TrimSuffix(filename, ".string")
 		if entry, ok := a.ctx.GetString(a.prefix + "/" + filename); ok {
-			a.cache[filename] = entry
 			return &billyString{
 				adapter:  a,
 				ctx:      a.ctx,
@@ -107,16 +82,7 @@ func (a *billyAdapter) Open(filename string) (billy.File, error) {
 			filename: filename,
 			file:     tempFile,
 		}, nil
-	} else if cacheFile, ok := cache.(base.File); ok && wasCached {
-		return &billyFile{
-			adapter:  a,
-			ctx:      a.ctx,
-			path:     a.prefix + "/" + filename,
-			filename: filename,
-			file:     cacheFile,
-		}, nil
 	} else if entry, ok := a.ctx.GetFile(a.prefix + "/" + filename); ok {
-		a.cache[filename] = entry
 		return &billyFile{
 			adapter:  a,
 			ctx:      a.ctx,
@@ -133,7 +99,6 @@ func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (bi
 
 	if flag == 577 { // writeonly, truncate, create
 		// TODO: include dirmode?
-		delete(a.cache, filename)
 		if err := a.MkdirAll(path.Dir(filename), perm); err != nil {
 			return nil, err
 		}
@@ -163,7 +128,6 @@ func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (bi
 
 func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 	log.Println("[billy] stat", filename)
-	cache, wasCached := a.cache[filename]
 
 	filename2 := filename
 	if strings.HasSuffix(filename, ".string") {
@@ -171,10 +135,7 @@ func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 	}
 
 	realName := strings.TrimSuffix("/"+strings.TrimPrefix(filename2, "/"), "/")
-	if wasCached {
-		return &billyFileInfo{cache, path.Base(filename)}, nil
-	} else if entry, ok := a.ctx.Get(a.prefix + realName); ok {
-		a.cache[filename] = entry
+	if entry, ok := a.ctx.Get(a.prefix + realName); ok {
 		return &billyFileInfo{entry, path.Base(filename)}, nil
 	} else {
 		return nil, os.ErrNotExist
@@ -182,7 +143,6 @@ func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 }
 func (a *billyAdapter) ReadDir(path string) ([]billy.FileInfo, error) {
 	log.Println("[billy] readdir", path)
-	cache, wasCached := a.cache[path]
 
 	dirPath := a.prefix
 	if len(path) > 0 {
@@ -191,15 +151,8 @@ func (a *billyAdapter) ReadDir(path string) ([]billy.FileInfo, error) {
 
 	var folder base.Folder
 	var ok bool
-	if wasCached {
-		if folder, ok = cache.(base.Folder); !ok {
-			return nil, os.ErrNotExist
-		}
-	} else {
-		if folder, ok = a.ctx.GetFolder(dirPath); !ok {
-			return nil, os.ErrNotExist
-		}
-		a.cache[path] = folder
+	if folder, ok = a.ctx.GetFolder(dirPath); !ok {
+		return nil, os.ErrNotExist
 	}
 
 	children := folder.Children()
@@ -221,7 +174,6 @@ func (a *billyAdapter) TempFile(dir, prefix string) (billy.File, error) {
 	a.tempCount++
 	filename := fmt.Sprintf("%s_%d_%d", prefix, a.tempCount, time.Now().UnixNano())
 	log.Println("[billy] tempfile", dir, prefix, filename)
-	delete(a.cache, filename)
 
 	fullName := a.Join(dir, filename)
 	a.tempFiles[fullName] = inmem.NewFile(filename, nil)
@@ -230,8 +182,6 @@ func (a *billyAdapter) TempFile(dir, prefix string) (billy.File, error) {
 
 func (a *billyAdapter) Rename(from, to string) error {
 	log.Println("[billy] rename", from, to)
-	delete(a.cache, from)
-	delete(a.cache, to)
 
 	// TODO: include dirmode?
 	if err := a.MkdirAll(path.Dir(to), 0666); err != nil {
@@ -255,7 +205,6 @@ func (a *billyAdapter) Rename(from, to string) error {
 
 func (a *billyAdapter) Remove(filename string) error {
 	log.Println("[billy] remove", filename)
-	delete(a.cache, filename)
 
 	if _, ok := a.tempFiles[filename]; ok {
 		// temp files aren't committed, just free from RAM
@@ -270,7 +219,6 @@ func (a *billyAdapter) Remove(filename string) error {
 
 func (a *billyAdapter) MkdirAll(filename string, perm os.FileMode) error {
 	log.Println("[billy] mkdirall", filename, perm)
-	delete(a.cache, filename)
 
 	// TODO: use perm
 	parts := strings.Split(filename, "/")
@@ -438,7 +386,6 @@ func (f *billyFile) Close() error {
 		return nil
 	} else if ok := f.ctx.Put(f.path, f.file); ok {
 		log.Println("[billy file] close: committed", f.file.Name())
-		delete(f.adapter.cache, f.filename)
 		return nil
 	} else {
 		return billy.ErrNotSupported
@@ -467,7 +414,6 @@ func (f *billyString) Write(p []byte) (n int, err error) {
 	f.str = inmem.NewString(f.str.Name(), string(p))
 	if ok := f.ctx.Put(f.path, f.str); ok {
 		log.Println("[billy string] write: committed", f.str.Name(), len(p))
-		delete(f.adapter.cache, f.filename)
 		return len(p), nil
 	} else {
 		log.Println("[billy string] write failed:", f.str.Name(), len(p))

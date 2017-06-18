@@ -40,7 +40,7 @@ func getGitDriver() *inmem.Folder {
 	).Freeze()
 }
 
-func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *billyAdapter, chan bool) {
+func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *billyAdapter) {
 	inputFolder := input.(base.Folder)
 	workingPath, _ := extras.GetChildString(inputFolder, "working-path")
 	repoPath, _ := extras.GetChildString(inputFolder, "repo-path")
@@ -48,28 +48,16 @@ func inflateGitInput(ctx base.Context, input base.Entry) (*filesystem.Storage, *
 		repoPath = workingPath + "/.git"
 	}
 
-	dumpSig := make(chan bool)
-	dumpSig1 := make(chan bool)
-	dumpSig2 := make(chan bool)
-	go func() {
-		defer close(dumpSig1)
-		defer close(dumpSig2)
-		for x := range dumpSig {
-			dumpSig1 <- x
-			dumpSig2 <- x
-		}
-	}()
-
-	repoTree := newBillyAdapter(ctx, repoPath, dumpSig1)
-	workTree := newBillyAdapter(ctx, workingPath, dumpSig2)
+	repoTree := newBillyAdapter(ctx, repoPath)
+	workTree := newBillyAdapter(ctx, workingPath)
 
 	repoStore, err := filesystem.NewStorage(repoTree)
 	if err != nil {
 		log.Println("[git] clone storage problem:", err)
-		return repoStore, nil, nil
+		return repoStore, nil
 	}
 
-	return repoStore, workTree, dumpSig
+	return repoStore, workTree
 }
 
 func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
@@ -85,7 +73,7 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	ctx.Put(workingPath, nil)
 	ctx.Put(workingPath, inmem.NewFolder(path.Base(workingPath)))
 
-	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
+	repoStore, workTree := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
 		log.Println("[git] clone storage problem:")
 		return nil
@@ -108,12 +96,11 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	return &gitApi{
 		repo:     repo,
 		worktree: worktree,
-		dumpSig:  dumpSig,
 	}
 }
 
 func gitInit(ctx base.Context, input base.Entry) (output base.Entry) {
-	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
+	repoStore, workTree := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
 		log.Println("[git] init storage problem:")
 		return nil
@@ -134,12 +121,11 @@ func gitInit(ctx base.Context, input base.Entry) (output base.Entry) {
 	return &gitApi{
 		repo:     repo,
 		worktree: worktree,
-		dumpSig:  dumpSig,
 	}
 }
 
 func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
-	repoStore, workTree, dumpSig := inflateGitInput(ctx, input)
+	repoStore, workTree := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
 		log.Println("[git] open storage problem:")
 		return nil
@@ -160,7 +146,6 @@ func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
 	return &gitApi{
 		repo:     repo,
 		worktree: worktree,
-		dumpSig:  dumpSig,
 	}
 }
 
@@ -169,7 +154,6 @@ func gitOpen(ctx base.Context, input base.Entry) (output base.Entry) {
 type gitApi struct {
 	repo     *git.Repository
 	worktree *git.Worktree
-	dumpSig  chan bool
 }
 
 var _ base.Folder = (*gitApi)(nil)
@@ -261,8 +245,6 @@ func (e *gitStatusFunc) Name() string {
 }
 
 func (e *gitStatusFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	e.api.dumpSig <- true
-
 	status, err := e.worktree.Status()
 	if err != nil {
 		panic(err)
@@ -291,8 +273,6 @@ func (e *gitAddFunc) Name() string {
 }
 
 func (e *gitAddFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	e.api.dumpSig <- true
-
 	inputFolder := input.(base.Folder)
 	path, _ := extras.GetChildString(inputFolder, "path")
 
@@ -334,8 +314,6 @@ func (e *gitRemoveFunc) Name() string {
 }
 
 func (e *gitRemoveFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	e.api.dumpSig <- true
-
 	inputFolder := input.(base.Folder)
 	path, _ := extras.GetChildString(inputFolder, "path")
 
@@ -373,8 +351,6 @@ func (e *gitCommitFunc) Name() string {
 }
 
 func (e *gitCommitFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	e.api.dumpSig <- true
-
 	inputFolder := input.(base.Folder)
 	message, _ := extras.GetChildString(inputFolder, "message")
 	authorName, _ := extras.GetChildString(inputFolder, "author-name")
@@ -425,8 +401,6 @@ func (e *gitPushFunc) Name() string {
 }
 
 func (e *gitPushFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	e.api.dumpSig <- true
-
 	inputFolder := input.(base.Folder)
 	remoteName, _ := extras.GetChildString(inputFolder, "remote-name")
 
@@ -466,8 +440,6 @@ func (e *gitPullFunc) Name() string {
 }
 
 func (e *gitPullFunc) Invoke(ctx base.Context, input base.Entry) (output base.Entry) {
-	e.api.dumpSig <- true
-
 	inputFolder := input.(base.Folder)
 	remoteName, _ := extras.GetChildString(inputFolder, "remote-name")
 
