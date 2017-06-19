@@ -233,6 +233,14 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 						},
 					},
 				},
+				{
+					Name: "go-src-cache",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/data/go-src-cache",
+						},
+					},
+				},
 			},
 			Containers: []apiv1.Container{
 				{
@@ -248,6 +256,10 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 						{
 							Name:      "docker-socket",
 							MountPath: "/var/run/docker.sock",
+						},
+						{
+							Name:      "go-src-cache",
+							MountPath: "/go/src",
 						},
 					},
 				},
