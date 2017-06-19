@@ -68,10 +68,10 @@ func gitClone(ctx base.Context, input base.Entry) (output base.Entry) {
 	//idempotent, _ := extras.GetChildString(inputFolder, "idempotent")
 
 	// delete the target
-	ctx.Put(repoPath, nil)
-	ctx.Put(repoPath, inmem.NewFolder("git"))
 	ctx.Put(workingPath, nil)
 	ctx.Put(workingPath, inmem.NewFolder(path.Base(workingPath)))
+	ctx.Put(repoPath, nil)
+	ctx.Put(repoPath, inmem.NewFolder("git"))
 
 	repoStore, workTree := inflateGitInput(ctx, input)
 	if repoStore == nil || workTree == nil {
