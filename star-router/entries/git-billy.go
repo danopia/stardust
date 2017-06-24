@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/stardustapp/core/base"
-	"gopkg.in/src-d/go-billy.v2"
-	//"github.com/stardustapp/core/extras"
+	"gopkg.in/src-d/go-billy.v3"
 	"github.com/stardustapp/core/inmem"
 )
 
@@ -126,7 +125,7 @@ func (a *billyAdapter) OpenFile(filename string, flag int, perm os.FileMode) (bi
 	}
 }
 
-func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
+func (a *billyAdapter) Stat(filename string) (os.FileInfo, error) {
 	log.Println("[billy] stat", filename)
 
 	filename2 := filename
@@ -141,7 +140,43 @@ func (a *billyAdapter) Stat(filename string) (billy.FileInfo, error) {
 		return nil, os.ErrNotExist
 	}
 }
-func (a *billyAdapter) ReadDir(path string) ([]billy.FileInfo, error) {
+
+// TODO: don't follow symlinks
+func (a *billyAdapter) Lstat(filename string) (os.FileInfo, error) {
+	log.Println("[billy] lstat", filename)
+
+	filename2 := filename
+	if strings.HasSuffix(filename, ".string") {
+		filename2 = strings.TrimSuffix(filename, ".string")
+	}
+
+	realName := strings.TrimSuffix("/"+strings.TrimPrefix(filename2, "/"), "/")
+	if entry, ok := a.ctx.Get(a.prefix + realName); ok {
+		return &billyFileInfo{entry, path.Base(filename)}, nil
+	} else {
+		return nil, os.ErrNotExist
+	}
+}
+
+func (a *billyAdapter) Readlink(link string) (string, error) {
+	log.Println("[billy] readlink !!", link)
+	// TODO
+	return "", os.ErrNotExist
+}
+
+func (a *billyAdapter) Root() (string) {
+	log.Println("[billy] root!!")
+	// TODO: this is related to Chroot
+	return "/"
+}
+
+func (a *billyAdapter) Symlink(target, link string) error {
+	log.Println("[billy] symlink!!", target, link)
+	// TODO
+	return os.ErrNotExist
+}
+
+func (a *billyAdapter) ReadDir(path string) ([]os.FileInfo, error) {
 	log.Println("[billy] readdir", path)
 
 	dirPath := a.prefix
@@ -156,7 +191,7 @@ func (a *billyAdapter) ReadDir(path string) ([]billy.FileInfo, error) {
 	}
 
 	children := folder.Children()
-	stats := make([]billy.FileInfo, len(children))
+	stats := make([]os.FileInfo, len(children))
 	for i, name := range children {
 		child, _ := folder.Fetch(name)
 		suffix := ""
@@ -257,6 +292,11 @@ func (a *billyAdapter) Base() string {
 	log.Println("[billy] base")
 	return ""
 }
+func (a *billyAdapter) Chroot(path string) (billy.Filesystem, error) {
+	log.Println("[billy] chroot")
+	panic("billy chroot isn't implemented")
+	return nil, nil
+}
 
 type billyFileInfo struct {
 	entry base.Entry
@@ -318,7 +358,7 @@ type billyFile struct {
 	dirty    bool
 }
 
-func (f *billyFile) Filename() string {
+func (f *billyFile) Name() string {
 	log.Println("[billy file] filename", f.file.Name())
 	return f.filename
 }
@@ -349,6 +389,17 @@ func (f *billyFile) Read(p []byte) (n int, err error) {
 		err = io.EOF
 	}
 	f.offset += int64(n)
+	return
+}
+
+func (f *billyFile) ReadAt(p []byte, offset int64) (n int, err error) {
+	bytes := f.file.Read(offset, len(p))
+	copy(p, bytes)
+	n = len(bytes)
+	//log.Println("[billy file] read", f.file.Name(), f.offset, len(p), n)
+	if n < len(p) {
+		err = io.EOF
+	}
 	return
 }
 
@@ -400,7 +451,7 @@ type billyString struct {
 	str      base.String
 }
 
-func (f *billyString) Filename() string {
+func (f *billyString) Name() string {
 	log.Println("[billy string] filename", f.str.Name())
 	return f.filename
 }
@@ -433,6 +484,10 @@ func (f *billyString) Read(p []byte) (n int, err error) {
 		log.Println("BILLY STRING WARN: STRING BIGGER THAN READ!!")
 	}
 	return
+}
+
+func (f *billyString) ReadAt(p []byte, offset int64) (n int, err error) {
+	return f.Read(p)
 }
 
 func (f *billyString) Seek(offset int64, whence int) (n int64, err error) {
