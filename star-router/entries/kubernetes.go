@@ -404,6 +404,16 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 				},
 				Spec: apiv1.PodSpec{
 					RestartPolicy: "Always",
+					Volumes: []apiv1.Volume{
+						{
+							Name: "ca-certs",
+							VolumeSource: apiv1.VolumeSource{
+								HostPath: &apiv1.HostPathVolumeSource{
+									Path: "/etc/ssl/certs/ca-certificates.crt",
+								},
+							},
+						},
+					},
 					Containers: []apiv1.Container{
 						{
 							Name:            "driver",
@@ -416,6 +426,12 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 									Name:          "http",
 									ContainerPort: 9234,
 									Protocol:      "TCP",
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      "ca-certs",
+									MountPath: "/etc/ssl/certs/ca-certificates.crt",
 								},
 							},
 						},
