@@ -367,7 +367,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 	podImage, _ := extras.GetChildString(inputFolder, "image")
 
 	var replicas int32 = 1
-	var terminationSeconds int64 = 0
+	var terminationSeconds int64 = 1
 	//MaxUnavailable := intstr.FromInt(0)
 	//MaxSurge := intstr.FromInt(1)
 	desiredDeployment := &appsv1.Deployment{
