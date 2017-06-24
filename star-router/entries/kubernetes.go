@@ -367,6 +367,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 	podImage, _ := extras.GetChildString(inputFolder, "image")
 
 	var replicas int32 = 1
+	var terminationSeconds int64 = 0
 	//MaxUnavailable := intstr.FromInt(0)
 	//MaxSurge := intstr.FromInt(1)
 	desiredDeployment := &appsv1.Deployment{
@@ -404,6 +405,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 				},
 				Spec: apiv1.PodSpec{
 					RestartPolicy: "Always",
+					TerminationGracePeriodSeconds: &terminationSeconds,
 					Volumes: []apiv1.Volume{
 						{
 							Name: "ca-certs",
