@@ -63,11 +63,11 @@ func startRedisNs(ctx base.Context, input base.Entry) (output base.Entry) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     address,
 		Password: password,
-		DB:       0,  // use default DB
+		DB:       0, // use default DB
 	})
 
 	ns := &redisNs{
-		svc: client,
+		svc:    client,
 		prefix: prefix,
 	}
 	return ns.getRoot()
@@ -75,8 +75,8 @@ func startRedisNs(ctx base.Context, input base.Entry) (output base.Entry) {
 
 // Main Entity representing a set of entries in a Redis server
 type redisNs struct {
-	svc *redis.Client
-	prefix  string
+	svc    *redis.Client
+	prefix string
 }
 
 func (ns *redisNs) getRoot() base.Entry {
@@ -84,7 +84,7 @@ func (ns *redisNs) getRoot() base.Entry {
 	if rootNid == "" {
 		log.Println("Initializing redisns root")
 		rootNid = ns.newNode("root", "Folder")
-		ns.svc.Set(ns.prefix + "root", rootNid, 0)
+		ns.svc.Set(ns.prefix+"root", rootNid, 0)
 	}
 	return ns.getEntry(rootNid)
 }
@@ -122,12 +122,12 @@ func (ns *redisNs) getEntry(nid string) base.Entry {
 	case "File":
 		// TODO: writable file struct!
 		data, _ := ns.svc.Get(prefix + "raw-data").Bytes()
-	  return inmem.NewFile(name, data)
+		return inmem.NewFile(name, data)
 
 	case "Folder":
 		return &redisNsFolder{
-			ns: ns,
-			nid: nid,
+			ns:     ns,
+			nid:    nid,
 			prefix: prefix,
 		}
 
@@ -137,13 +137,12 @@ func (ns *redisNs) getEntry(nid string) base.Entry {
 	}
 }
 
-
 // Persists as a Folder from an redisNs instance
 // Presents as a dynamic name tree
 type redisNsFolder struct {
-	ns *redisNs
+	ns     *redisNs
 	prefix string
-	nid string
+	nid    string
 }
 
 var _ base.Folder = (*redisNsFolder)(nil)
@@ -158,7 +157,7 @@ func (e *redisNsFolder) Children() []string {
 }
 
 func (e *redisNsFolder) Fetch(name string) (entry base.Entry, ok bool) {
-	nid := e.ns.svc.HGet(e.prefix + "children", name).Val()
+	nid := e.ns.svc.HGet(e.prefix+"children", name).Val()
 	if nid == "" {
 		return nil, false
 	}
@@ -173,7 +172,7 @@ func (e *redisNsFolder) Put(name string, entry base.Entry) (ok bool) {
 	if entry == nil {
 		// unlink a child, leaves it around tho
 		// TODO: garbage collection!
-		e.ns.svc.HDel(e.prefix + "children", name)
+		e.ns.svc.HDel(e.prefix+"children", name)
 		return true
 	}
 
@@ -214,7 +213,7 @@ func (e *redisNsFolder) Put(name string, entry base.Entry) (ok bool) {
 		log.Println("redisns put failed for", name, "on node", e.nid)
 		return false
 	} else {
-		e.ns.svc.HSet(e.prefix + "children", name, nid)
+		e.ns.svc.HSet(e.prefix+"children", name, nid)
 		return true
 	}
 }
