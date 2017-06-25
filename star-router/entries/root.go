@@ -1,7 +1,7 @@
 package entries
 
 import (
-	"github.com/stardustapp/core/drivers"
+	"github.com/stardustapp/core/skylink"
 	"github.com/stardustapp/core/inmem"
 )
 
@@ -26,8 +26,8 @@ func newRomEntry() *inmem.Folder {
 		getConsulDriver(),
 		getKubernetesDriver(),
 		getHueDriver(),
-		drivers.GetNsexportDriver(),
-		drivers.GetNsimportDriver(),
+		skylink.GetNsexportDriver(),
+		skylink.GetNsimportDriver(),
 	).Freeze()
 
 	bin := inmem.NewFolderOf("bin",
