@@ -41,9 +41,9 @@ func (e *cwdProvider) Invoke(ctx base.Context, input base.Entry) (output base.En
 
 type rayCtx struct {
 	ctx      base.Context
-	commands base.Queue
+	commands base.Channel
 	output   base.Log
-	//result   base.Queue
+	//result   base.Channel
 	environ base.Folder
 	cwd     cwdProvider
 }
@@ -52,9 +52,9 @@ func newRayCtx(cctx base.Context) *rayCtx {
 	log.Println("Starting new Ray")
 	ctx := &rayCtx{
 		ctx:      cctx,
-		commands: inmem.NewSyncQueue("commands"),
+		commands: inmem.NewSyncChannel("commands"),
 		output:   inmem.NewLog("output"),
-		//result:   inmem.NewBufferedQueue("result", 1),
+		//result:   inmem.NewBufferedChannel("result", 1),
 		environ: inmem.NewFolder("environ"),
 	}
 	ctx.cwd.value = "/"
@@ -266,7 +266,7 @@ func (c *rayCtx) evalCommand(cmd string, args []string) (ok bool) {
 
 			case base.Log:
 				extra = "log"
-			case base.Queue:
+			case base.Channel:
 				extra = "queue"
 			case base.Function:
 				extra = "function"
@@ -310,7 +310,7 @@ func rayFunc(cctx base.Context, input base.Entry) (output base.Entry) {
 			ctx.commands.Close()
 		}(ctx)
 
-	//case base.Queue:
+	//case base.Channel:
 	//	ctx.commands = input // TODO: do this earlier
 
 	default:

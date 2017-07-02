@@ -151,7 +151,7 @@ func (e *raySsh) handleChannel(ch ssh.NewChannel, addr string) {
 	if !ok {
 		panic("wat0")
 	}
-	commands := cmdEntry.(base.Queue)
+	commands := cmdEntry.(base.Channel)
 	e.tmpFolder.Put(addr, ray)
 
 	outputEnt, ok := ray.Fetch("output")
