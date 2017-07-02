@@ -15,9 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	apiv1 "k8s.io/client-go/pkg/api/v1"
-	appsv1 "k8s.io/client-go/pkg/apis/apps/v1beta1"
-	batchv1 "k8s.io/client-go/pkg/apis/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1beta1"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -214,7 +214,7 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 	isPrivileged := podPrivileged == "yes"
 
 	pods := e.svc.CoreV1().Pods("default")
-	_, err := pods.Create(&apiv1.Pod{
+	_, err := pods.Create(&corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "core/v1",
 			Kind:       "Pod",
@@ -222,37 +222,37 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 		ObjectMeta: metav1.ObjectMeta{
 			Name: podName,
 		},
-		Spec: apiv1.PodSpec{
+		Spec: corev1.PodSpec{
 			RestartPolicy: "Never",
-			Volumes: []apiv1.Volume{
+			Volumes: []corev1.Volume{
 				{
 					Name: "docker-socket",
-					VolumeSource: apiv1.VolumeSource{
-						HostPath: &apiv1.HostPathVolumeSource{
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
 							Path: "/var/run/docker.sock",
 						},
 					},
 				},
 				{
 					Name: "go-src-cache",
-					VolumeSource: apiv1.VolumeSource{
-						HostPath: &apiv1.HostPathVolumeSource{
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
 							Path: "/data/go-src-cache",
 						},
 					},
 				},
 			},
-			Containers: []apiv1.Container{
+			Containers: []corev1.Container{
 				{
 					Name:            "pod",
 					Image:           podImage,
 					ImagePullPolicy: "Never",
 					Command:         []string{podCmdParts[0]},
 					Args:            podCmdParts[1:],
-					SecurityContext: &apiv1.SecurityContext{
+					SecurityContext: &corev1.SecurityContext{
 						Privileged: &isPrivileged,
 					},
-					VolumeMounts: []apiv1.VolumeMount{
+					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "docker-socket",
 							MountPath: "/var/run/docker.sock",
@@ -283,7 +283,7 @@ func (e *kubeRunPodFunc) Invoke(ctx base.Context, input base.Entry) (output base
 	var terminated bool
 
 	for evt := range watcher.ResultChan() {
-		pod := evt.Object.(*apiv1.Pod)
+		pod := evt.Object.(*corev1.Pod)
 
 		containerStatuses := pod.Status.ContainerStatuses
 		if len(containerStatuses) > 0 {
@@ -393,7 +393,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 				// 	MaxSurge:       &MaxSurge,
 				// },
 			},
-			Template: apiv1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Labels: map[string]string{
@@ -403,34 +403,34 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 						"stardust-nonce": extras.GenerateSecret(),
 					},
 				},
-				Spec: apiv1.PodSpec{
+				Spec: corev1.PodSpec{
 					RestartPolicy: "Always",
 					TerminationGracePeriodSeconds: &terminationSeconds,
-					Volumes: []apiv1.Volume{
+					Volumes: []corev1.Volume{
 						{
 							Name: "ca-certs",
-							VolumeSource: apiv1.VolumeSource{
-								HostPath: &apiv1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/etc/ssl/certs/ca-certificates.crt",
 								},
 							},
 						},
 					},
-					Containers: []apiv1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:            "driver",
 							Image:           podImage,
 							ImagePullPolicy: "Never",
 							//Command:         []string{podCmdParts[0]},
 							//Args:            podCmdParts[1:],
-							Ports: []apiv1.ContainerPort{
+							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
 									ContainerPort: 9234,
 									Protocol:      "TCP",
 								},
 							},
-							VolumeMounts: []apiv1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "ca-certs",
 									MountPath: "/etc/ssl/certs/ca-certificates.crt",
@@ -443,7 +443,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 		},
 	}
 
-	desiredService := &apiv1.Service{
+	desiredService := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "api/v1",
 			Kind:       "Service",
@@ -451,8 +451,8 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "stardriver-" + svcName,
 		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
 					Protocol:   "TCP",
@@ -463,7 +463,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 			Selector: map[string]string{
 				"stardriver": svcName,
 			},
-			Type: apiv1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeNodePort,
 		},
 	}
 
@@ -491,7 +491,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 
 	// Wait for deployment to stabilize
 	var ready bool
-	for !ready { // condition.Status != apiv1.ConditionTrue || condition.Reason != "NewReplicaSetAvailable" {
+	for !ready { // condition.Status != corev1.ConditionTrue || condition.Reason != "NewReplicaSetAvailable" {
 		time.Sleep(1000 * time.Millisecond)
 		depl, err := deployments.Get(desiredDeployment.ObjectMeta.Name, metav1.GetOptions{})
 		if err != nil {
@@ -502,13 +502,13 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 		ready = true
 		for _, cond := range depl.Status.Conditions {
 			if cond.Type == "Progressing" {
-				if cond.Status != apiv1.ConditionTrue || cond.Reason != "NewReplicaSetAvailable" {
+				if cond.Status != corev1.ConditionTrue || cond.Reason != "NewReplicaSetAvailable" {
 					ready = false
 					log.Printf("deployment %s progress: %v", desiredDeployment.ObjectMeta.Name, cond)
 				}
 			}
 			if cond.Type == "Available" {
-				if cond.Status != apiv1.ConditionTrue {
+				if cond.Status != corev1.ConditionTrue {
 					ready = false
 					log.Printf("deployment %s availability: %v", desiredDeployment.ObjectMeta.Name, cond)
 				}
@@ -568,13 +568,13 @@ func (e *kubeSubmitJobFunc) Invoke(ctx base.Context, input base.Entry) (output b
 		Spec: batchv1.JobSpec{
 			Parallelism: &parallelism,
 			Completions: &parallelism,
-			Template: apiv1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: jobName,
 				},
-				Spec: apiv1.PodSpec{
+				Spec: corev1.PodSpec{
 					RestartPolicy: "OnFailure",
-					Containers: []apiv1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:    "job",
 							Image:   jobImage,
