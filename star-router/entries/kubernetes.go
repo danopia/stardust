@@ -12,12 +12,12 @@ import (
 	"github.com/stardustapp/core/extras"
 	"github.com/stardustapp/core/inmem"
 
+	appsv1 "k8s.io/api/apps/v1beta1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	appsv1 "k8s.io/api/apps/v1beta1"
-	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -404,7 +404,7 @@ func (e *kubeDeploySvcFunc) Invoke(ctx base.Context, input base.Entry) (output b
 					},
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: "Always",
+					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationSeconds,
 					Volumes: []corev1.Volume{
 						{

@@ -119,6 +119,10 @@ func (ns *redisNs) getEntry(nid string) base.Entry {
 		value := ns.svc.Get(prefix + "value").Val()
 		return inmem.NewString(name, value)
 
+	case "Link":
+		value := ns.svc.Get(prefix + "target").Val()
+		return inmem.NewLink(name, value)
+
 	case "File":
 		// TODO: writable file struct!
 		data, _ := ns.svc.Get(prefix + "raw-data").Bytes()
@@ -199,6 +203,10 @@ func (e *redisNsFolder) Put(name string, entry base.Entry) (ok bool) {
 	case base.String:
 		nid = e.ns.newNode(entry.Name(), "String")
 		e.ns.svc.Set(e.ns.prefixFor(nid, "value"), entry.Get(), 0)
+
+	case base.Link:
+		nid = e.ns.newNode(entry.Name(), "Link")
+		e.ns.svc.Set(e.ns.prefixFor(nid, "target"), entry.Target(), 0)
 
 	case base.File:
 		nid = e.ns.newNode(entry.Name(), "File")

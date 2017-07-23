@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/stardustapp/core/base"
-	"gopkg.in/src-d/go-billy.v3"
 	"github.com/stardustapp/core/inmem"
+	"gopkg.in/src-d/go-billy.v3"
 )
 
 type billyAdapter struct {
@@ -164,7 +164,7 @@ func (a *billyAdapter) Readlink(link string) (string, error) {
 	return "", os.ErrNotExist
 }
 
-func (a *billyAdapter) Root() (string) {
+func (a *billyAdapter) Root() string {
 	log.Println("[billy] root!!")
 	// TODO: this is related to Chroot
 	return "/"

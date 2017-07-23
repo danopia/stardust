@@ -1,8 +1,8 @@
 package entries
 
 import (
-	"github.com/stardustapp/core/skylink"
 	"github.com/stardustapp/core/inmem"
+	"github.com/stardustapp/core/skylink"
 )
 
 // Presents the root name
