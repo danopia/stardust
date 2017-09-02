@@ -24,6 +24,7 @@ func newRomEntry() *inmem.Folder {
 		getAwsNsDriver(),
 		getRedisNsDriver(),
 		getConsulDriver(),
+		getFakeConsulDriver(),
 		getKubernetesDriver(),
 		getHueDriver(),
 		skylink.GetNsexportDriver(),

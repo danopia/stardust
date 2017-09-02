@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	//"flag"
 	//"fmt"
 	"log"
 
@@ -9,13 +9,13 @@ import (
 	//"github.com/danopia/stardust/wormhole/kernel"
 	"github.com/danopia/stardust/star-router/entries"
 	"github.com/stardustapp/core/base"
-	"github.com/stardustapp/core/inmem"
+	//"github.com/stardustapp/core/inmem"
 )
 
 func main() {
 	//var port = flag.Int("port", 9234, "TCP port that the wormhole should be available on")
-	var consulUri = flag.String("consul-uri", "http://127.0.0.1:8500", "Base URI for Consul (serves as nvram)")
-	flag.Parse()
+	//var consulUri = flag.String("consul-uri", "http://127.0.0.1:8500", "Base URI for Consul (serves as nvram)")
+	//flag.Parse()
 
 	//http.HandleFunc("/sockjs/info", ddp.ServeSockJsInfo)
 	//http.HandleFunc("/sockjs", ddp.ServeSockJs)
@@ -32,19 +32,19 @@ func main() {
 		panic("Init executable not found. That shouldn't happen.")
 	}
 
-	// Get the Consul driver in /rom/drv
-	consulClone, ok := ctx.GetFunction("/rom/drv/consul/invoke") // TODO
+	// Get the ROM driver in /rom/drv
+	romClone, ok := ctx.GetFunction("/rom/drv/rom/invoke") // TODO
 	if !ok {
-		panic("Consul Driver not found. That shouldn't happen.")
+		panic("ROM Driver not found. That shouldn't happen.")
 	}
 
-	// Mount the Consul driver at /n/consul
-	ctx.Put("/n/consul", consulClone.Invoke(ctx, inmem.NewString("uri", *consulUri)))
+	// Mount the ROM driver at /n/rom
+	ctx.Put("/n/rom", romClone.Invoke(ctx, nil))
 
-	// Bind consul keyval tree to /boot/cfg
-	kv, ok := ctx.GetFolder("/n/consul/kv")
+	// Bind rom keyval tree to /boot/cfg
+	kv, ok := ctx.GetFolder("/n/rom/kv")
 	if !ok {
-		panic("Consul KV not found. That shouldn't happen.")
+		panic("ROM KV not found. That shouldn't happen.")
 	}
 	ctx.Put("/boot/cfg", kv)
 
