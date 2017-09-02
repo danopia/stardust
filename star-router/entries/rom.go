@@ -130,6 +130,6 @@ func (e *romKV) Put(name string, entry base.Entry) (ok bool) {
 		prefix += "/"
 	}
 
-	log.Println("rom: dropping put to %s", prefix + name)
+	log.Println("rom: dropping put to %s", prefix+name)
 	return false
 }
