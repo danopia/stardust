@@ -21,6 +21,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var stringOutputShape *inmem.Shape = inmem.NewShape(
+	inmem.NewFolderOf("output-shape",
+		inmem.NewString("type", "String"),
+	))
+
 // Directory containing the clone function
 func getKubernetesDriver() *inmem.Folder {
 	return inmem.NewFolderOf("kubernetes",
